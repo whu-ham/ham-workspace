@@ -26,6 +26,13 @@ This repository coordinates the HAM product repositories. The repositories in `r
 - Write code comments in English.
 - Use English Conventional Commit messages, such as `feat(auth): add OAuth callback handling` or `fix(api): return validation error`.
 
+## Workspace issue traceability
+
+- When a pull request implements work tracked by a `whu-ham/ham-workspace` issue, its description must link the issue using `Closes whu-ham/ham-workspace#<number>` when the PR fully completes it, or `Refs whu-ham/ham-workspace#<number>` otherwise.
+- Every functional commit for that task must include a `Workspace-Issue: whu-ham/ham-workspace#<number>` trailer after the Conventional Commit subject and body.
+- Use one primary workspace issue per pull request. Reference any additional related issues in the pull request description.
+- Independent maintenance work that does not implement a workspace issue does not require an issue reference.
+
 ## Workspace commands
 
 ```sh
