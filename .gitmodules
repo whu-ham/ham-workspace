@@ -1,0 +1,18 @@
+[submodule "repos/ham-ios"]
+	path = repos/ham-ios
+	url = https://github.com/whu-ham/ham-ios.git
+[submodule "repos/ham-android"]
+	path = repos/ham-android
+	url = https://github.com/whu-ham/ham-android.git
+[submodule "repos/ham-web"]
+	path = repos/ham-web
+	url = https://github.com/whu-ham/ham-web.git
+[submodule "repos/ham-proto"]
+	path = repos/ham-proto
+	url = https://github.com/whu-ham/ham-proto.git
+[submodule "repos/ham-rn"]
+	path = repos/ham-rn
+	url = https://github.com/whu-ham/ham-rn.git
+[submodule "repos/ham-backend-go"]
+	path = repos/ham-backend-go
+	url = https://github.com/whu-ham/ham-backend-go.git
