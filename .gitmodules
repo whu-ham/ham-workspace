@@ -16,3 +16,6 @@
 [submodule "repos/ham-backend-go"]
 	path = repos/ham-backend-go
 	url = https://github.com/whu-ham/ham-backend-go.git
+[submodule "repos/whu-ham.github.io"]
+	path = repos/whu-ham.github.io
+	url = https://github.com/whu-ham/whu-ham.github.io.git
