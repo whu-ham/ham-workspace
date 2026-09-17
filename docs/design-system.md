@@ -1,133 +1,162 @@
 # Ham design system
 
-Cross-client visual specification for the native apps. Every number here is measured from
-source, not invented. Where the two clients disagreed, **iOS is the baseline**.
+How to build the Ham native apps. This is a specification, not a comparison — read it as
+"build it this way". Values are measured from the existing code; where the two clients
+disagreed, **iOS is the baseline**.
 
-Status: **proposed**. Not implemented on either side yet.
+Current divergences between the shipped clients are recorded in
+[§8 Current divergences](#8-current-divergences) at the end, so this document stays readable
+as a spec.
 
 ## Contents
 
-- [1. How to read this](#1-how-to-read-this)
-- [2. Colour](#2-colour)
-- [3. Type](#3-type)
-- [4. Spacing](#4-spacing)
-- [5. Radius](#5-radius)
-- [6. Elevation](#6-elevation)
-- [7. Iconography](#7-iconography)
-- [8. Components](#8-components)
-- [9. Platform-sanctioned divergences](#9-platform-sanctioned-divergences)
-- [10. Undecided](#10-undecided)
-- [11. Review checklist](#11-review-checklist)
-- [Appendix A — Known defects](#appendix-a--known-defects)
+- [1. Overview](#1-overview)
+- [2. Foundations](#2-foundations)
+- [3. Components](#3-components)
+- [4. Screens](#4-screens)
+- [5. Shared flows](#5-shared-flows)
+- [6. Platform rules](#6-platform-rules)
+- [7. Undecided](#7-undecided)
+- [8. Current divergences](#8-current-divergences)
+- [9. Review checklist](#9-review-checklist)
 
 ---
 
-## 1. How to read this
+## 1. Overview
 
-### Conformance
+### 1.1 App structure
 
-**Must** means a reviewer should block a PR that violates it without a stated reason.
+Three root tabs, **状态 as the default**:
 
-- New UI **must** take padding, radius, font, and colour from a named token here.
-- Literal numbers in view code are permitted only where no token applies, and **should** be
-  treated with suspicion in review.
-- Every colour **must** have a light and a dark value and **must** be an adaptive resource
-  (asset-colour set on iOS, `values` + `values-night` on Android). Never a hardcoded
-  `Color(0xFF…)` in view code.
+```
+┌─────────────────────────────────────────────┐
+│                                             │
+│              <screen content>               │
+│                                             │
+├─────────────────────────────────────────────┤
+│   课程表        状态(默认)        我的       │  ← tab bar
+└─────────────────────────────────────────────┘
+```
 
-### Units
+| Tab | Chinese | Content |
+| --- | --- | --- |
+| Course | 课程表 | Week-by-week class grid |
+| Status | 状态 | Dashboard of live module cards |
+| My | 我的 | Account hub + function grid |
 
-**pt** (iOS) and **dp** (Android) are treated as 1:1 — both are density-independent and
-resolve to the same physical size at reference density. Type sizes are **pt** on iOS and
-**sp** on Android, likewise treated 1:1.
+Everything else is reached from one of these three — mostly from the **function grid** on 我的,
+which is the app's real navigation hub.
 
-### Marking
+### 1.2 Navigation hub: the function grid
 
-Each normative value is tagged:
+The 我的 tab carries a horizontally scrolling grid of module shortcuts. Each tile is driven by
+a remote-config entry keyed by module name, and **each tile uses its module's brand colour**:
 
-- **[T]** transcribed — both platforms already agree, we are just writing it down.
-- **[M]** majority or tokenised — one side has a token or a clear majority, the other migrates.
-- **[C]** chosen — neither codebase has a coherent value; this document picks one.
+| Key | Label | Brand colour | Goes to |
+| --- | --- | --- | --- |
+| `library` | 图书馆 | `#007AFF` | Library home |
+| `sport` | 运动 | `#34C759` | Sport home |
+| `score` | 成绩 | `#FF9500` | Score home |
+| `course_score` | 课程评分 | `#283593` | CourseScore search |
+| `pay` | 付费 | `#BF360C` | Pay |
+| `bus` | 校车 | `#A2845E` | Bus |
+| `course` | 课程表 | `#1B5E20` | Course timetable |
+| `schedule` | 日程 | `#01579B` | Schedule |
 
-### Why iOS is the baseline
+Tiles appear only when their config entry is present, so the grid can change without a release.
+Two tiles are always available regardless: 设置 and 关于.
 
-iOS is the only client whose values are internally coherent for the surfaces that matter most.
-It has one card container (`HamCardView`, padding 16 / radius 16) used by 71 call sites, and
-its brand colours are Apple System Colours that already carry correct dark-mode pairs.
+### 1.3 Page scaffold
 
-Android's drift was traced to wiring, not intent: `ham_brand_sport` and `ham_brand_score` are
-aliases pointing at Material semantic resources (`R.color.green`, `R.color.warning`) while the
-correct hexes sit unused in `colors.xml`. The wrong values won by accident.
+Every scrollable screen has this shape:
 
-**This choice has a cost.** Adopting the iOS type scale raises Android `body` 16 → 17sp and
-`headline` 14 → 17sp (+21%). Android layouts were tuned around the smaller values. See
-[§3.6](#36-migration-risk).
+```
+┌─────────────────────────────────────────────┐
+│ status bar                (system)          │
+├─────────────────────────────────────────────┤
+│ header / nav bar          42 + status bar   │  ← Android renders in-Compose; iOS uses UINavigationController
+├─────────────────────────────────────────────┤
+│                                             │
+│  ┌───────────────────────────────────────┐  │  ← 16 horizontal margin
+│  │ card                                  │  │
+│  └───────────────────────────────────────┘  │
+│                 8 gap                       │
+│  ┌───────────────────────────────────────┐  │
+│  │ card                                  │  │
+│  └───────────────────────────────────────┘  │
+│                                             │
+│              (scrolls)                      │
+│                                             │
+│         bottom spacing (see below)          │
+├─────────────────────────────────────────────┤
+│ tab bar                (system inset)       │
+└─────────────────────────────────────────────┘
+```
+
+| Property | Value |
+| --- | --- |
+| Screen horizontal margin | **16** |
+| Gap between cards | **8** |
+| Screen background | `surface.primary` |
+| Bottom spacing — tab-root screen | system navigation-bar inset **+ 80** |
+| Bottom spacing — pushed/child screen | system navigation-bar inset **+ 24** |
+
+Bottom spacing is computed from the live system inset, never hardcoded.
 
 ---
 
-## 2. Colour
+## 2. Foundations
 
-Measured from `Ham/shared/Assets.xcassets/color/*.colorset`,
-`Ham/shared/utils/extension/Color+Ham.swift`, and `android/core/ui/.../config/Color.kt`.
+### 2.1 Units
 
-### 2.1 Brand
+**pt** (iOS) and **dp** (Android) are 1:1 — both density-independent. Type sizes are **pt** and
+**sp**, also 1:1.
 
-Each module has its own brand colour. Used for card header bands, tinted fills, icons, and
-status-card accents.
+### 2.2 Colour
 
-| Token | Light | Dark | Android now | Change |
-| --- | --- | --- | --- | --- |
-| `brand.course` | #1B5E20 | #1B5E20 | same | — |
-| `brand.schedule` | #01579B | #01579B | same | — |
-| `brand.library` | #007AFF | #0A84FF | same | — |
-| `brand.sport` | #34C759 | #30D158 | #4CAF50 static | **change** |
-| `brand.score` | #FF9500 | #FF9F0A | #FF9800 static | **change** |
-| `brand.coursescore` | #283593 | #283593 | same | — |
-| `brand.bus` | #A2845E | #AC8E68 | same | — |
-| `brand.pay` | #BF360C | #BF360C | same | — |
+Every colour has a light and a dark value and is an adaptive resource. Never hardcode a hex in
+view code.
 
-**[M]** The two changes are one-line fixes in `Color.kt` — `R.color.ham_green` and
-`R.color.ham_orange` already hold the correct hexes and are referenced by nothing. Fixing them
-also fixes the weather card, which reads `Color.ham_orange`.
+#### Brand
 
-### 2.2 Surface
+Each module owns one brand colour, used for its status-card header, its function-grid tile, its
+tinted fills, and its icons.
+
+| Token | Light | Dark | Module |
+| --- | --- | --- | --- |
+| `brand.course` | #1B5E20 | #1B5E20 | 课程表 |
+| `brand.schedule` | #01579B | #01579B | 日程 |
+| `brand.library` | #007AFF | #0A84FF | 图书馆 |
+| `brand.sport` | #34C759 | #30D158 | 运动 |
+| `brand.score` | #FF9500 | #FF9F0A | 成绩 |
+| `brand.coursescore` | #283593 | #283593 | 课程评分 |
+| `brand.bus` | #A2845E | #AC8E68 | 校车 |
+| `brand.pay` | #BF360C | #BF360C | 付费 |
+
+#### Surface
 
 | Token | Light | Dark | Used for |
 | --- | --- | --- | --- |
 | `surface.primary` | #F9F9F9 | #000000 | Screen background |
 | `surface.secondary` | #FFFFFF | #0F0F0F | Cards |
-| `surface.tertiary` | #EDEEEF | #0F0E0F | Chips, inactive cells, borders |
+| `surface.tertiary` | #EDEEEF | #0F0E0F | Chips, inactive cells, borders, dividers |
 | `surface.tint` | #E6F1FF | #010D18 | Today / selected cells |
 
-**[T]** All four are identical on both platforms today.
+#### Text
 
-Cards are separated from the page by the `surface.secondary` / `surface.primary` fill delta
-alone — there is no shadow or border anywhere. See [§6](#6-elevation).
+| Token | Light | Dark | Used for |
+| --- | --- | --- | --- |
+| `text.primary` | #000000 | #FFFFFF | Titles, values, body |
+| `text.secondary` | #8E8E93 | #98989D | Subtitles, captions, meta |
+| `text.tertiary` | #8E8E93 @ 60% | #98989D @ 60% | Placeholder, disabled |
+| `text.link` | #007AFF | #0A84FF | Inline links |
+| `text.danger` | #FF3B30 | #FF453A | Destructive text |
 
-### 2.3 Text
+Define these as **semantic roles, not hex values**. iOS's `Color.primary` and `Color.gray` are
+dynamic; writing #000000 into a spec would break iOS dark mode. The hexes above are the
+*Android* implementation of each role.
 
-| Token | Light | Dark | Android now | Change |
-| --- | --- | --- | --- | --- |
-| `text.primary` | #000000 | #FFFFFF | same | — |
-| `text.secondary` | #8E8E93 | #98989D | #888888 no dark variant | **change** |
-| `text.tertiary` | — | — | — | new, absorbs opacity-on-text drift |
-| `text.placeholder` | — | — | — | new |
-| `text.link` | #007AFF | #0A84FF | `ham_blue` #007AFF | — |
-| `text.danger` | #FF3B30 | #FF453A | `ham_red` #F44336 | **change** |
-
-**[M]** Define these as **semantic roles, never as hex literals in the spec.** iOS's
-`Color.primary` and `Color.gray` are dynamic; freezing them to #000000/#8E8E93 in a document
-would break iOS dark mode. Quote the hexes only as the *Android* implementation of each role.
-
-Two real bugs behind this table, both Android:
-
-- `Color.kt:29` — `ham_text_secondary` is hardcoded Compose `Gray`, not a resource reference.
-  It cannot adapt to dark mode, and `values-night/colors.xml` keeps `gray` at #888888 anyway.
-- Three reds are in play for the same string: iOS `Color.red` (#FF3B30), Android `ham_red`
-  (#F44336), and raw `Color.Red` (#FF0000) used at `SyncLogoutView.kt:49` for 退出登录 while
-  `UserCenterMainView.kt:183` uses #F44336 for the identical string.
-
-### 2.4 Feedback
+#### Feedback
 
 | Token | Light | Dark |
 | --- | --- | --- |
@@ -136,676 +165,765 @@ Two real bugs behind this table, both Android:
 | `feedback.warning` | #FFCC00 | #FFD60A |
 | `feedback.error` | #FF3B30 | #FF453A |
 
-**[C]** Android's toast has only three types (normal / success / error); iOS has five. Add
-`warning` and `info`.
+#### Tint recipes
 
-### 2.5 Tint recipes
-
-Brand colour is never used at full strength behind content. Three recipes cover every case:
+Brand colour is never used at full strength behind content.
 
 | Recipe | Formula | Used for |
 | --- | --- | --- |
-| `tint.subtle` | `surface.secondary` + brand @ 0.15 | Large tiles, function buttons, status-card header |
-| `tint.chip` | brand @ 0.10, brand-coloured text | Filter chips, small pills |
+| `tint.subtle` | `surface.secondary` + brand @ 0.15 | Status-card headers, large tiles, function buttons |
+| `tint.chip` | brand @ 0.10 background, brand text | Filter chips, small pills |
 | `tint.active` | brand @ 1.0, white text | Filled primary buttons |
+| `tint.muted` | `text.secondary` @ 0.10, `text.secondary` text | Unselected chips, inactive states |
 
-**[M]** The 0.15 recipe is the house style — it appears as `color.opacity(0.15)` on iOS and
-`color.copy(alpha = 0.15f)` on Android in the SSO authorize button, which is a near-exact
-cross-platform match. It is currently **not** applied consistently: the same semantic role uses
-alphas of 0.10, 0.13, 0.15, 0.20, and 0.25 across both platforms.
+Two rules: always put a tint over an **opaque base**, and always use the **brand colour for
+tinted button text** (not the label colour).
 
-Two rules that fall out:
+### 2.3 Type
 
-1. **Always put the tint over an opaque base.** Android's `MyViewFunctionButtonView` omits the
-   base layer, so those buttons are translucent against whatever is behind them.
-2. **Tinted button text is the brand colour, not the label colour.** iOS's sport 预定 button
-   uses `.ham_text_t1Color` where Android uses `ham_green`. Take Android's: brand.
-
----
-
-## 3. Type
-
-### 3.1 Scale
-
-| Token | Size | Weight | iOS | Android now | Change |
-| --- | --- | --- | --- | --- | --- |
-| `largeTitle` | 34 | Bold | `.largeTitle.bold()` | 28 | +6 |
-| `title` | 28 | Bold | `.title.bold()` | 24 | +4 |
-| `title2` | 22 | Bold | `.title2.bold()` | 20 | +2 |
-| `title3` | 20 | Bold | `.title3.bold()` | 16 | +4 |
-| `headline` | 17 | Semibold | `.headline` | 14 | +3 |
-| `headlineBold` | 17 | Bold | `.headline.bold()` | 14 | +3 |
-| `body` | 17 | Regular | `.body` | 16 | +1 |
-| `bodyBold` | 17 | Bold | `.body.bold()` | 16 | +1 |
-| `callout` | 16 | Regular | `.callout` | — | add |
-| `subheadline` | 15 | Regular | `.subheadline` | — | add |
-| `footnote` | 13 | Regular | `.footnote` | — | add |
-| `caption` | 12 | Regular | `.caption` | 12 | — |
-| `captionBold` | 12 | Bold | `.caption.bold()` | 12 | — |
-| `caption2` | 11 | Regular | `.caption2` | 11 | — |
-
-**[M]** `caption` (12) and `caption2` (11) already agree, and they are the most-used styles in
-both apps — 279 uses on iOS, 266 on Android. They are untouched.
-
-**Retire on Android:** `largeTitle` (0 call sites). `title2` and `title3` are currently both
-16sp, identical to `body` — three names, one size. Give them the real iOS values or delete them.
-
-**iOS must stop relying on the implicit default.** Omitting `.font()` yields SwiftUI's 17pt
-`body`, which happens to match this scale, but it makes the value invisible at the call site
-and unsearchable. Always name the token.
-
-**Android must stop relying on MaterialTheme inheritance.** Once `body` is 17 rather than
-Material's 16, call sites that omit a style still get 16. Always pass the token.
-
-### 3.2 Weight convention
-
-**[C] Use Bold for emphasis. Do not use Semibold.**
-
-Evidence: iOS uses bold 202 times vs semibold 26 (7.8 : 1). Android has exactly two weights in
-product code — `FontWeight.Bold` and `FontWeight.Normal`; `SemiBold` and `Medium` are absent
-(`FontWeight.Medium` appears once, inside a `MaterialTheme.typography` object that nothing
-references). Adopting Bold costs ~26 iOS sites and 0 Android sites; adopting Semibold costs
-~202 iOS sites and requires inventing a weight Android does not have.
-
-The decisive point is that iOS's semibold is drift, not a rule — one card contains two sibling
-headings, same size, one bold and one semibold (`ScoreMainViewMyScoreDataCard.swift:24` and
-`:48`). Whichever the author typed.
-
-A practical reason: at 11–12pt, semibold thins CJK strokes, and this is a Chinese-language app
-whose caption tier is 11–12.
-
-Also fix the token definitions: `HamFontStyle.headline`, `caption`, and `caption2` declare no
-`fontWeight` at all. Give all tokens an explicit weight, and an explicit colour — the missing
-colours are why `ReservedCard.kt:74` renders an uncoloured hero number.
-
-### 3.3 Line height
-
-**[C] Neither platform sets line height today.** This is the largest genuine gap in the system.
-
-iOS has zero `lineSpacing` / `lineHeight` / `NSParagraphStyle` declarations in app code.
-Android has three, all inside `MaterialTheme.typography`, which is referenced zero times — so
-they are unreachable. None of the eleven `HamFontStyle` tokens declares a line height.
-
-The two platforms "agree" only by accident, and the defaults are different numbers: iOS text
-styles carry roughly 1.20–1.35× leading; Compose defaults to font metrics with
-`includeFontPadding` on. Negligible at 11–12sp, several dp at 24–28sp.
-
-Proposed: add `lineHeight` to every token.
-
-| Token | Size | Line height | Ratio |
-| --- | --- | --- | --- |
-| `largeTitle` | 34 | 40 | 1.18 |
-| `title` | 28 | 34 | 1.21 |
-| `title2` / `title3` | 22 / 20 | 28 / 28 | 1.27 / 1.40 |
-| `headline` / `body` | 17 / 17 | 24 / 24 | 1.41 |
-| `callout` / `subheadline` | 16 / 15 | 22 / 22 | 1.38 / 1.47 |
-| `footnote` | 13 | 18 | 1.38 |
-| `caption` / `caption2` | 12 / 11 | 16 / 16 | 1.33 / 1.45 |
-
-On iOS there is no native line-height modifier; this needs a helper producing a `UIFont` with
-custom leading via `UIFontMetrics` / `NSParagraphStyle`.
-
-### 3.4 Truncation
-
-**[T]** Both teams independently converged on the same convention: iOS has 68 `lineLimit` uses,
-Android 66 `maxLines`, with the same distribution.
-
-| Role | Lines |
-| --- | --- |
-| Screen title, row title | 1 |
-| Row meta, two-line card title | 2 |
-| Grid cell label, card body | 3 |
-| Long-form preview | 5 |
-| Body prose, hints | unbounded |
-
-Two rules:
-
-1. **`maxLines = n` must always be paired with `TextOverflow.Ellipsis` on Android.** 23 of 66
-   sites (35%) set `maxLines` without it and hard-clip with no visual ellipsis. iOS cannot have
-   this bug — `lineLimit(n)` implies tail truncation.
-2. Write **unbounded**, not `lineLimit(0)`. The latter is a SwiftUI idiom that reads as "zero
-   lines" but means "unbounded".
-
-### 3.5 Numeric display
-
-**[C]** iOS has a real rounded-digit convention, scoped to four modules and applied without
-exception inside them: coursescore (4/4 hero numbers), sport (14/14), bus (9/9), weather (1/1).
-Android has none — `fontFeatureSettings` and custom `Font(...)` are both absent from product
-code.
-
-Promote it to a system role:
-
-| Token | Size | Weight | Design | Used for |
+| Token | Size | Weight | Line height | Used for |
 | --- | --- | --- | --- | --- |
-| `numeric.regular` | 12 | Regular | default | Course period rail, clock times |
-| `numeric.display` | 28 | Bold | rounded | Seat numbers, GPA, rank, rate |
-| `numeric.hero` | 36 | Regular | rounded | Temperature |
+| `largeTitle` | 34 | Bold | 40 | Large page title on 状态 |
+| `title` | 28 | Bold | 34 | Hero values, banner titles |
+| `title2` | 22 | Bold | 28 | Section values |
+| `title3` | 20 | Bold | 28 | Card titles on secondary screens |
+| `headline` | 17 | Semibold | 24 | Emphasised body |
+| `body` | 17 | Regular | 24 | Body text, list titles, buttons |
+| `bodyBold` | 17 | Bold | 24 | Card titles, list titles |
+| `callout` | 16 | Regular | 22 | Secondary body |
+| `subheadline` | 15 | Regular | 22 | Dense secondary text |
+| `footnote` | 13 | Regular | 18 | Fine print |
+| `caption` | 12 | Regular | 16 | Subtitles, meta, chips |
+| `captionBold` | 12 | Bold | 16 | Chip labels, emphasised captions |
+| `caption2` | 11 | Regular | 16 | Smallest labels |
 
-Add **tabular figures** to `numeric.regular`. Neither platform uses monospaced digits anywhere
-(0 hits for `monospacedDigit()` on iOS, 0 for `FontFeature.tabularNumbers` on Android), so the
-12pt course-period rail and the sport clock times jitter horizontally as digits change width.
+Rules:
 
-### 3.6 Migration risk
+- **Always name the token.** Never rely on an inherited default size — on iOS omitting
+  `.font()` silently yields 17pt; on Android omitting `style` silently yields Material's 16sp.
+- **Bold is the only emphasised weight.** Not semibold, not medium.
+- **Numeric display uses rounded figures** at 28 and above, with **tabular figures** at 12.
+  Tabular figures matter: the course period rail and the sport clock times otherwise jitter
+  horizontally as digits change width.
 
-**[M]** The type change is the expensive part of this document.
+### 2.4 Text roles
 
-| Change | Impact |
-| --- | --- |
-| `headline` 14 → 17sp | +21%. Largest reflow. Text-heavy Android screens will move. |
-| `body` 16 → 17sp | +6%, but 240 Android call sites. |
-| `title3` 16 → 20sp | +25%, but only 2 call sites. |
-| `title2` 20 → 22sp | +10%. |
-| `title` 24 → 28sp | +17%. Only 36 call sites, all hero values. |
-| `largeTitle` 28 → 34sp | 0 call sites — just delete it. |
+| Role | Size | Weight | Colour | Lines |
+| --- | --- | --- | --- | --- |
+| Screen large title | 34 | Bold | `text.primary` | 1 |
+| Section header | 12 | Regular | `text.secondary` | 1 |
+| Card title | 17 | Bold | `text.primary` | 2 |
+| Card subtitle | 12 | Regular | `text.secondary` | 1 |
+| Hero value | 28 | Bold, rounded | `text.primary` | 1 |
+| List row title | 17 | Bold | `text.primary` | 1 |
+| List row subtitle | 12 | Regular | `text.secondary` | 1 |
+| Body | 17 | Regular | `text.primary` | unbounded |
+| Caption / meta | 12 | Regular | `text.secondary` | 1 |
+| Overline | 12 | Regular | `text.secondary` | 1 |
+| Link | 12 | Regular, underlined | `text.link` | 1 |
+| Destructive | 17 | Regular | `text.danger` | 1 |
+| Placeholder | 12 | Regular | `text.tertiary` | unbounded |
+| Chip label | 12 | Bold | on `tint.chip` | 1 |
+| Numeric, small | 12 | Regular, tabular | `text.primary` | 1 |
 
-Land the non-type changes first, then type as a separate pass with full visual review.
+On Android, `maxLines = n` must always be paired with `overflow = TextOverflow.Ellipsis`.
 
-### 3.7 Text roles
-
-The table below is the one to use day to day. `LL` = line limit.
-
-| # | Role | Size | Weight | Colour | LL | Mark |
-| --- | --- | --- | --- | --- | --- | --- |
-| 1 | Screen / large title | 34 | Bold | `text.primary` | 1 | **[M]** |
-| 2 | Section header | 12 | Regular | `text.secondary` | 1 | **[M]** |
-| 3 | Card title | 17 | Bold | `text.primary` | 2 | **[M]** |
-| 4 | Card subtitle | 12 | Regular | `text.secondary` | 1 | **[T]** |
-| 5 | Primary value / big number | 28 | Bold, rounded | `text.primary` | 1 | **[M]** |
-| 6 | List row title | 17 | Bold | `text.primary` | 1 | **[M]** |
-| 7 | List row subtitle | 12 | Regular | `text.secondary` | 1 | **[T]** |
-| 8 | Body text | 17 | Regular | `text.primary` | unbounded | **[M]** |
-| 9 | Caption / meta | 12 | Regular | `text.secondary` | 1 | **[M]** |
-| 10 | Overline / eyebrow | 12 | Regular | `text.secondary` | 1 | **[T]** |
-| 11 | Link | 12 | Regular | `text.link`, underlined | 1 | **[C]** |
-| 12 | Destructive | 17 | Regular | `text.danger` | 1 | **[C]** |
-| 13 | Placeholder / empty state | 12 | Regular | `text.placeholder` | unbounded | **[C]** |
-| 14 | Badge / chip label | 12 | Bold | on `tint.chip` | 1 | **[M]** |
-| 15 | Numeric, small | 12 | Regular, tabular | `text.primary` | 1 | **[T]** |
-
-Notes on the rows that are not simple transcriptions:
-
-- **Row 2 (section header)** — the role exists only on iOS, in one screen
-  (`CourseSettingView*Section.swift`, 3 instances). Android has no such component; the same
-  screen uses 16sp bold card titles instead. Android needs a new `HamSectionHeader` composable.
-  Do **not** repurpose `HamCardView(title=)` — 78 call sites depend on it.
-- **Row 9 (caption colour)** — size agrees at 12; **colour polarity is inverted.** iOS defaults
-  captions to secondary grey (47 uses secondary vs 14 primary). Android defaults them to
-  primary (90 vs 45), and **68% of Android captions pass no colour at all**, so their rendered
-  colour is decided by the enclosing container. Choose secondary.
-- **Row 11 (link)** — links never use a brand colour; those are module accents. iOS underlines,
-  Android does not. Take iOS. Android already defines `<color name="link">#007AFF</color>` in
-  `colors.xml:14` and references it from zero Compose files.
-- **Row 13 (placeholder)** — no token exists on either side. iOS has three ad-hoc helpers with
-  three different colours (including one literal `.black`); Android has one genuinely reusable
-  `HamTextField` that tokenises size and colour. Take Android's structure, iOS's size.
-- **Row 3/6 (title weight)** — iOS uses semibold in the shared card component but bold
-  everywhere else. Per [§3.2](#32-weight-convention), standardise on Bold.
-
----
-
-## 4. Spacing
-
-### 4.1 Scale
-
-4pt grid.
+### 2.5 Spacing
 
 | Token | Value | Used for |
 | --- | --- | --- |
-| `space.1` | 2 | Hairline gaps, course grid gutters |
-| `space.2` | 4 | Icon-to-label, tight stack gaps |
-| `space.3` | 8 | Default stack gap, internal padding, card gap |
-| `space.4` | 12 | Status-card padding, vertical padding inside tiles |
+| `space.1` | 2 | Hairline gaps, grid gutters |
+| `space.2` | 4 | Icon-to-label, tight stacks, divider padding |
+| `space.3` | 8 | Default stack gap, card gap, internal padding |
+| `space.4` | 12 | Status-card padding |
 | `space.5` | 16 | Screen margin, card padding |
-| `space.6` | 24 | Section separation, screen top offsets |
+| `space.6` | 24 | Section separation |
 | `space.7` | 32 | Hero offsets |
 
-| Current outlier | Collapse to |
-| --- | --- |
-| 6 | 8 (`space.3`) |
-| 10 | 8 (`space.3`) |
-| 15 | 16 (`space.5`) |
-| 20 | 24 (`space.6`) |
-
-### 4.2 Page layout
-
-| Property | Value | Mark | Notes |
-| --- | --- | --- | --- |
-| Screen horizontal margin | **16** | **[T]** | All 12 non-timetable measurements on both platforms are exactly 16. No screen uses anything else. |
-| Gap between cards | **8** | **[M]** | Android authors it (status, sport, score, settings). iOS never authors it — its `VStack`s omit spacing, so the rendered value is SwiftUI's default, not a design decision. Adopting 8 codifies what iOS already renders. |
-| Screen background | `surface.primary` | **[T]** | Identical on both. |
-| Content top offset | header + status bar | — | See below. |
-| Bottom spacing (tab-root screens) | navigation-bar inset **+ 80** | **[M]** | Android computes it (`bottomWithTabBarHeight()`, `Spacer.kt:20`). iOS hardcodes 96 / 100 / 128 / 90, and sport, score and course-settings have **no trailing spacer at all** — content can run under the tab bar. |
-| Bottom spacing (pushed/child screens) | navigation-bar inset **+ 24** | **[M]** | `HomeContainer.kt:83`, `ScoreMainView.kt:186`. |
-
-**[M] Android has a shared page scaffold and iOS does not.** This is the single biggest
-structural difference between the two codebases.
-
-- Android has four composables in `core/ui/container/nav/`. `HamHomeContainer`
-  (`HomeContainer.kt:50`) is used by library and sport; `HamNavigationView`
-  (`NavigationView.kt:373`) is the base; `HamNavigationLazyScrollView` (`:333`) and
-  `HamNavigationScrollView` (`:300`) wrap list and scroll screens. They own the page background
-  (`ham_bg_b1`), the top offset (`TOOLBAR_HEIGHT 42.dp + statusBar`, or `headerHeight 36.dp`),
-  and the bottom spacer.
-- iOS has none. `Ham/iOS/ui/common/container/MainContainer.swift` is a **7-line empty stub** —
-  imports only, no types. Every iOS screen hand-rolls `ScrollView` + `.padding(.horizontal)` +
-  a hardcoded bottom `Spacer`.
-
-The cheapest path: promote `MyViewNavContainer` out of `ui/my/component/nav/` into
-`ui/common/container/`, parameterise its hardcoded `56` / `72` / `100` constants, and make it
-the iOS counterpart to `HamHomeContainer`. It already mirrors the Android structure.
-
-**Do not converge the top chrome.** iOS defers to `UINavigationController`; Android renders an
-in-Compose header. Specify the result — content begins below a 42dp (or 36dp) header plus the
-status bar — and let each platform meet it natively.
-
-**The timetable is an explicit full-bleed exception**, not a competing default: iOS uses a 10pt
-header inset and Android a 4dp grid inset because the grid must reach the screen edges. Record
-it as such so nobody "fixes" it.
-
----
-
-## 5. Radius
+### 2.6 Radius
 
 | Token | Value | Used for |
 | --- | --- | --- |
 | `radius.1` | 2 | Progress bars |
-| `radius.2` | 4 | Checkboxes, dots, smallest chips |
-| `radius.3` | 6 | Badges, colour bars, filter chips |
-| `radius.4` | 8 | Buttons, inner cards, banners, text fields |
-| `radius.5` | 10 | Course grid cells, weekday cells, period cells |
-| `radius.6` | 12 | Controls, status-card header pills, alert cards |
+| `radius.2` | 4 | Checkboxes, dots |
+| `radius.3` | 6 | Badges, colour bars, chips |
+| `radius.4` | 8 | Buttons, inner cards, text fields, banners |
+| `radius.5` | 10 | Course grid cells only |
+| `radius.6` | 12 | Controls, alert cards |
 | `radius.card` | 16 | Cards, status cards, large tiles |
 
-**[M]** iOS currently has 14 distinct radius values, Android 15. Most collapse into the seven
-above. `radius.5` (10) exists because the course timetable uses 10 consistently across all
-three cell types on iOS — it is not a general-purpose value, so do not reach for it outside the
-grid.
+### 2.7 Elevation
 
----
+**None.** Cards are flat. Separation comes from the `surface.secondary` on `surface.primary`
+fill delta plus the 16 radius — no shadow, no border, no elevation parameter.
 
-## 6. Elevation
-
-**[T] There is no elevation. Cards are flat on both platforms.**
-
-Verified: zero `.shadow` on any iOS card (`HamCardView` and `CommonStatusCard` both have none),
-and Android's `HamCardView` is a plain `Box` with `.clip().background().clipToBounds()` — not a
-Material3 `Card`/`Surface`, with no elevation parameter and no way for callers to opt in.
-Across 1155 `.kt` files: `tonalElevation` 0 hits, `ElevatedCard`/`OutlinedCard` 0 hits, and the
-four `Modifier.shadow` uses are all non-card (tab pill, floating back button, app icon, a
-preview). `MaterialTheme` passes no `shapes` and no elevation scale.
-
-Cards are separated purely by the `surface.secondary` vs `surface.primary` fill delta plus the
-16 radius. **Adding elevation would be net-new work, not a parity fix** — this document does
-not propose it.
-
-Curiosity: Android defines `ham_card_shadow_color` (`#28000000` / `#19000000`) in
-`colors.xml:88` and `values-night/colors.xml:55`, referenced only by a View-system window style
-that Compose never reaches.
-
----
-
-## 7. Iconography
+### 2.8 Iconography
 
 | Token | Value | Used for |
 | --- | --- | --- |
-| `icon.xs` | 12 | Inline with caption text |
+| `icon.xs` | 12 | Inline with caption text, chevrons |
 | `icon.sm` | 20 | List-row leading glyph |
-| `icon.md` | 24 | Status-card header icon, chevrons, icon-button glyph |
-| `icon.lg` | 32 | Small-card trailing decoration |
-| `icon.xl` | 64 | Large tile, banner foreground |
-| `icon.hero` | 72 | Banner foreground (tall variant) |
+| `icon.md` | 24 | Status-card header, icon buttons |
+| `icon.lg` | 32 | Small-card trailing decoration, area badges |
+| `icon.xl` | 64 | Large tiles, empty states |
+| `icon.hero` | 72 | Banner foreground |
 | `icon.watermark` | 128 | Card background watermark |
 
-Two things to fix:
-
-1. **[M] iOS leaves many icons unsized.** The status-card header icon is a bare
-   `Image(systemName:)` with no `.font()` or `.frame()` (`CommonStatusCard.swift:52`), inheriting
-   roughly 17pt, while Android pins 24dp. Size them explicitly.
-2. **[C] Chevrons differ 3×.** iOS writes `.font(.system(size: 8))` in 22 places across 8 files;
-   Android uses the Material default 24dp. Neither is chosen — 8 is small enough to look like an
-   oversight, 24 is just whatever Material does. **Proposal: 12**, which is between them and
-   already a spacing token. See [§10](#10-undecided).
-
-### Watermark
-
-**[C]** The decorative background icon is the least consistent element in the app. Nine distinct
-sizes across thirteen live watermarks (iOS 128, 180; Android 60, 128×3, 144, 172, 200, 240,
-250×2). Neither platform's declared default is the house style — Android's `size = 60.dp` is
-used at 2 of 11 sites and iOS's `200` at 0 of 2.
-
-Two rules:
-
-1. **A size number does not mean the same thing on the two platforms.** iOS renders the
-   watermark as `.font(.system(size:))` — an SF Symbol whose *ink* is much smaller than its box.
-   Android uses `.requiredSize()` — the vector fills the whole box. A 128 iOS glyph and a 128dp
-   Android icon are not optically equivalent. The spec must mandate a **fixed frame**
-   (`.frame(width:height:)` + `.resizable()`) on iOS, not a font size.
-2. Standardise on `icon.watermark` 128, alpha **0.12**, anchored **bottom-trailing** at offset
-   **(16, 16)**, clipped to the card. Both platforms already agree on the anchor; the offsets
-   and alphas are chaos.
-
-Note that the most prominent iOS watermarks are hand-rolled outside the primitive entirely —
-220pt crown (`ScoreMainViewMyScoreDataCard.swift:78`), 156pt person, 142pt doc, and four 128pt
-glyphs. That is where the visual language actually lives.
+Every icon must be explicitly sized. Watermarks render at a **fixed frame size** (not a font
+size) at alpha **0.12**, anchored **bottom-trailing** at offset **(16, 16)**, clipped to the
+card — iOS renders an SF Symbol's ink smaller than its box, Android fills the box, so a font
+size and a frame size are not interchangeable.
 
 ---
 
-## 8. Components
+## 3. Components
 
-### 8.1 Card
+### 3.1 Card
 
-**[T]** Both platforms already agree on the primitive. Nothing to change.
+The workhorse. Radius 16, padding 16, `surface.secondary`, flat.
 
 ```
-CARD                       radius 16 · padding 16 · bg surface.secondary · no shadow, no border
-├── HEADER?                [plain]  transparent, inset 0 — inherits the card's 16
-│                          [status] bg = brand @ 0.15, padding 12 all sides
-│   ├── icon 24            leading
-│   ├── title              17 / Bold / text.primary     (status: brand colour)
-│   ├── subtitle           12 / Regular / text.secondary
-│   └── chevron 24         trailing, optional
-├── BODY                   padding = 16 (shared inset)
-│   └── gap header→body    8 (plain card) · 0 (status card — the band's own padding separates)
-├── DIVIDER?               1px, surface.tertiary, inset 0, vertical padding 4
-└── FOOTER?                padding 16
+┌──────────────────────────────────────────────────────┐
+│ CARD                              radius 16, pad 16  │
+│                                                      │
+│  Title                          17 / Bold / primary  │  ← HEADER (optional)
+│  Subtitle                       12 / Regular / sec.  │
+│         ───────────── 8 ──────────────               │
+│  <body content>                 padding 16           │
+│                                                      │
+│  ──────────────────────────────────────────────────  │  ← DIVIDER (optional)
+│  <footer content>               padding 16           │
+└──────────────────────────────────────────────────────┘
 ```
 
-| Property | Value | Mark |
-| --- | --- | --- |
-| radius | 16 | **[T]** `CardView.swift:23` = `Card.kt:53` |
-| padding | 16, single inset shared by header and body | **[T]** `CardView.swift:22` = `Card.kt:48` |
-| background | `surface.secondary` | **[T]** |
-| header → body gap | 8 (plain) / 0 (status) | **[T]** the only spacing value both platforms independently agree on |
-| title | 17 / Bold / `text.primary` | **[M]** iOS semibold → Bold per §3.2 |
-| subtitle | 12 / Regular / `text.secondary` | **[T]** |
-| divider | 1px `surface.tertiary`, inset 0, vertical padding 4 | **[C]** iOS `Divider()` has no colour token at all; Android uses `ham_lightGray` |
+| Property | Value |
+| --- | --- |
+| radius | 16 |
+| padding | 16 — a single inset shared by header, body, and footer |
+| background | `surface.secondary` |
+| header → body gap | 8 (emitted only when a title exists) |
+| divider | 1px `surface.tertiary`, inset 0, vertical padding 4 |
+| watermark | `icon.watermark` 128 @ 0.12, bottom-trailing (16, 16), clipped |
 
-Both sides have **27 (iOS)** and **21 (Android)** hand-rolled cards that bypass the primitive.
-They are listed in [Appendix A](#appendix-a--known-defects). Absorb them or document them, but
-do not leave them as silent outliers.
+### 3.2 Status card
 
-### 8.2 Status card
+A card with a coloured header band. Used only on the 状态 dashboard.
 
-| Property | iOS | Android now | Normative |
-| --- | --- | --- | --- |
-| radius | 16 (`:80`) | 12.dp (`:49`) | **16** |
-| header padding | 12 all sides (`:71`) | v12 / h16 (`:67-68`) | **12 all sides** |
-| content padding | 12 (`:22`) | 16.dp (`:53`) | **12** |
-| header background | brand @ 0.15 (`:74`) | brand @ 0.15 (`:66`) | **brand @ 0.15** |
-| header title | 17 Bold (`:54`) | 16 Bold (`:77`) | **17 Bold** |
-| header icon | unsized (`:52`) | 24.dp (`:75`) | **24** |
-| header → body gap | 0 (`:50`) | 0 | **0** |
+```
+┌──────────────────────────────────────────────────────┐
+│▓▓ [icon] 图书馆                              ▸ ▓▓▓▓▓▓│  ← band: brand @ 0.15, padding 12
+├──────────────────────────────────────────────────────┤
+│                                                      │
+│  <body content>                  padding 12          │
+│                                                      │
+└──────────────────────────────────────────────────────┘
+     radius 16 · background surface.secondary
+```
 
-**Android must also gain a `padding` parameter.** iOS's component takes one and
-`StatusBusCard.swift:20` passes `0`; Android has no way to express that.
+| Property | Value |
+| --- | --- |
+| radius | 16 |
+| band background | brand @ 0.15 |
+| band padding | 12 all sides |
+| band icon | `icon.md` (24), brand colour |
+| band title | 17 / Bold, brand colour |
+| band → body gap | **0** — the band's own padding separates them |
+| body padding | **12**, overridable (the bus card passes 0) |
+| trailing chevron | `icon.xs` (12), brand colour, present only when the card navigates |
 
-### 8.3 List row
+### 3.3 List row
 
-| Property | iOS | Android now | Normative |
-| --- | --- | --- | --- |
-| height | implicit | implicit | **implicit** |
-| icon plate | 40×40 circle, brand @ 0.1 | 40.dp circle, brand @ 0.1 | **40 @ 0.1** |
-| icon glyph | 20 semibold | 25.dp (one row is 30) | **20** |
-| icon → text gap | 8 | 8 | **8** |
-| title | 17 semibold | 16 Bold | **17 Bold** |
-| subtitle | 12 / `text.secondary` | 12 / `text.secondary` | **12 / secondary** |
-| chevron | unsized ~17, `.gray` | 24.dp, `Color.Gray` | **12** per §10 |
-| divider | system, no token | `ham_lightGray` | **surface.tertiary** |
+A tappable row inside a card, or standalone.
 
-Android's `MyViewLinkCard` sets the icon glyph to 25dp and, on the settings row, 30dp —
-inconsistent with its own siblings. Fix to 20.
+```
+┌──────────────────────────────────────────────────────┐
+│  ╭────╮                                              │
+│  │ ic │  Title                              ▸        │
+│  ╰────╯  Subtitle                                    │
+└──────────────────────────────────────────────────────┘
+   40×40 circle       8 gap        17/Bold    12 chevron
+   brand @ 0.1                     12/Regular subtitle
+```
 
-### 8.4 Buttons
+| Property | Value |
+| --- | --- |
+| icon plate | 40 × 40 circle, brand @ 0.1 |
+| icon glyph | `icon.sm` (20) |
+| icon → text gap | 8 |
+| title | 17 / Bold, `text.primary` |
+| subtitle | 12 / Regular, `text.secondary` |
+| chevron | `icon.xs` (12), `text.secondary` |
+| divider between rows | 1px `surface.tertiary`, inset 0, vertical padding 4 |
 
-Neither platform has a styled button component. Android's `HamButton` (`Button.kt:31`) supplies
-only three things: press feedback (`alpha → 0.25f`), a `contentColor` that most call sites
-override, and telemetry. It has **no padding, no height, no radius, no background, no border,
-no ripple**. iOS has no `ButtonStyle` at all.
+### 3.4 Buttons
 
-So the spec below is mostly **new work**, not a value change.
+| Variant | Height | Padding | Radius | Background | Text |
+| --- | --- | --- | --- | --- | --- |
+| Filled primary | 48 | h16 | 8 | `tint.active` | 17 / Bold / white |
+| Tinted | 48 | h16 v12 | 12 | `tint.subtle` | 17 / Bold / brand |
+| Borderless | = text | 0 | — | none | 17 / Regular / `text.link` |
+| Destructive text | = text | 0 | — | none | 17 / Regular / `text.danger` |
+| Destructive pill | 28 | h12 v6 | 8 | transparent, 1px `text.danger` @ 0.3 | 12 / Regular / `text.danger` |
+| Row-style | 52 | h16 | 12 | `tint.subtle` | 17 / Bold |
+| Large tile | 150 | 16 | 16 | `tint.subtle` | 17 / Bold + 11 subtitle |
+| Icon button | 44 target | 8 | circle | `surface.tertiary` | — |
 
-| Variant | Height | Padding | Radius | Background | Text | Mark |
-| --- | --- | --- | --- | --- | --- | --- |
-| **Filled primary** | 48 | h16 | 8 | `tint.active` (brand @ 1.0) | 17 / Bold / white | **[M]** |
-| **Tinted** | 48 | h16 v12 | 12 | `tint.subtle` (brand @ 0.15 over base) | 17 / Bold / brand | **[T]** |
-| **Borderless** | = text box | 0 | — | none | 17 / Regular / `text.link` | **[T]** |
-| **Destructive (text)** | = text box | 0 | — | none | 17 / Regular / `text.danger` | **[T]** |
-| **Destructive (outlined pill)** | 28 | h12 v6 | 8 | transparent, 1px `text.danger` @ 0.3 | 12 / Regular / `text.danger` | **[M]** iOS-only today |
-| **Row-style tinted** | 52 | h16 | 12 | `tint.subtle` | 17 / Bold, 12 subtitle | **[M]** |
-| **Large tile** | 150 | 16 | 16 | `tint.subtle` | 17 / Bold, 11 subtitle | **[M]** |
-| **Icon button** | 44 target | 8 | circle | `surface.tertiary` | — | **[C]** |
+Rules:
 
-Notes:
+- **Disabled** = palette swap, not opacity: `tint.subtle` → `tint.muted`, brand text →
+  `text.secondary`. Reserve whole-view opacity 0.5 for genuinely unavailable regions.
+- **Minimum tap target 44**, including icon buttons and inline links. This is a hard floor.
+- Every button has a pressed state.
 
-- **The SSO authorize button is the reference implementation** — v-pad 12, radius 12, alpha
-  0.15, bold, brand-coloured text, and a grey @0.1 / grey disabled swap all agree across
-  platforms (`SSOAuthorizationSheet.swift:437-447` vs `SSOAuthorizationSheet.kt:531-549`).
-  Build the shared button to match it.
-- **Android's `48.dp` explicit height appears 24 times** and is its only real standard. iOS has
-  no equivalent. Take 48 for the standard button, 52 for the row-style variant (iOS's value).
-- **Disabled state has no convention on either side.** iOS has one data point (`.opacity(0.5)`
-  at `LibraryModifyBookingView.swift:105`); Android has one (`0.6f` at
-  `SSOAuthorizationSheet.kt:470`). The only coherent disabled treatment on both is the SSO
-  button's palette swap. **[C] Standardise on the palette swap** — brand @0.15 → grey @0.1,
-  brand text → grey text — and reserve whole-view opacity 0.5 for genuinely unavailable
-  controls.
-- **Press feedback differs structurally.** Android dims the whole subtree to alpha 0.25 (which
-  is very aggressive); iOS uses the native flash. **[C]** Android should adopt a ripple or a
-  lighter dim; 0.25 is below most guidelines.
-- **Minimum tap target: 44.** Neither platform enforces one. Android's smallest is 16×16dp
-  (`LoginView.kt:191`, `CourseCommentItemView.kt:170`); iOS's is ~14×14pt. This is an
-  accessibility defect independent of visual parity.
-
-### 8.5 Chips and badges
-
-**[T] The filter chip is the single most convergent control in the app** — radius 6, padding
-h6 / v4, alpha 0.1, 12sp caption, brand-vs-grey for selected-vs-unselected. All eight metrics
-match exactly (`CourseScoreResultViewSearchBar.swift:67-75` vs
-`CourseScoreResultItemFilterFunctionView.kt:69-77`).
-
-Use it as the model:
+### 3.5 Chips and badges
 
 | Property | Value |
 | --- | --- |
 | radius | 6 |
 | padding | h6 / v4 |
 | selected | brand @ 0.10 background, brand text |
-| unselected | `text.secondary` @ 0.10 background, `text.secondary` text |
+| unselected | `tint.muted` — `text.secondary` @ 0.10 background, `text.secondary` text |
 | font | 12 / Bold |
 
-Everything else in this family is chaos. iOS's 收藏座位 badge is an orange pill with no Android
-counterpart; 上次预约 is green on iOS and `ham_blue` on Android; the bus line name is a pill on
-iOS and plain bold text on Android. Badge radii in use across both platforms: 4, 5, 6, 8.
-Neither platform has a reusable badge component — iOS repeats the recipe 7 times with 4 radii
-and 3 sizes, Android has one extracted component.
+Status badge (the coloured bar or dot beside a value): 6 × 6, radius 3, in the entity's colour.
 
-Also: **neither platform has a chip with a close/remove (×) button.** Zero on both.
+### 3.6 Controls
 
-### 8.6 Controls
+| Control | Specification |
+| --- | --- |
+| Switch | Native on each platform. Android: checked track = `brand.sport`, unchecked track = `surface.tertiary`. |
+| Slider | Native on each platform, no custom colours. |
+| Progress bar | Height 4, radius 2, track `surface.tertiary`, fill in context colour. |
+| Text field | Radius 8, background `surface.secondary`, 1px `surface.tertiary` border, padding 8, body text, placeholder `text.tertiary`, caret `text.link`. |
+| Segmented control | Track radius 6, track `text.secondary` @ 0.40, track padding 2, thumb radius 6, thumb `surface.tertiary`. Thumb radius must equal track radius (they differ today). |
+| Picker button | Radius 8, padding v8 / h12, background `surface.tertiary`, 17 / Regular. |
+| Swipe to confirm | Height 48, radius 12, track `surface.tertiary`, fill `text.danger`, 3px handle. |
+| Checkbox | `icon.md` (24), radius 4, `text.link` when checked. |
 
-**[T] iOS delegates controls entirely to the system. Android uses Material3 with partial token
-wiring.** This is largely a sanctioned divergence — you cannot make a SwiftUI `Toggle` look
-like a Material `Switch` without a full custom implementation, and it is not worth it.
-
-| Control | iOS | Android | Normative |
-| --- | --- | --- | --- |
-| **Switch** | native `Toggle`, no styling | `HamSwitch`: M3 `Switch`, track `ham_green` / `ham_lightGray` | Keep native. **Fix Android's checked track to `brand.sport` (#34C759)** — `ham_green` is currently the wrong green. |
-| **Slider** | native `Slider`, no styling | M3 `Slider`, no custom colours | Keep native on both. |
-| **Progress** | native `ProgressView` | hand-rolled bar: height 4, radius 2 | Keep native. Android's bar: **height 4, radius 2** |
-| **Text field** | three ad-hoc helpers, no shared component | `HamTextField`: radius 8, bg `surface.secondary`, 1px `surface.tertiary` border, padding 8, 16sp body, cursor `text.link` | **Port `HamTextField`'s spec to iOS.** |
-| **Segmented picker** | native `Picker(.segmented)` | `HamHorizontalPicker`: track radius 6 / `ham_gray` @0.40 / padding 2, thumb radius 5 / `ham_lightGray` | Keep native on iOS. **Fix Android's thumb radius to match the track (both 6)** — they differ today. |
-| **Picker button** | — | `DatePickerButton` / `TimePickerButton` / `HamFixedTimePickerButton`: radius 8, padding v6 / h8, bg `Color.Gray` @0.15, 16sp body | **[C]** radius 8, padding v8 / h12, bg `surface.tertiary`, 17 / Regular |
-| **Swipe to confirm** | height 50, radius 10, track grey @0.2, fill red | height 48, radius 12, track `ham_gray` @0.15, fill `ham_red` | **[M]** height 48, radius 12. Near-match already. |
-
-### 8.7 Sheet
-
-| Property | iOS | Android | Normative |
-| --- | --- | --- | --- |
-| radius | system (~12) | 24.dp (`Sheet.kt:65`) | keep per platform — see §10 |
-| drag handle | system | **none** | **add: 36 × 5, pill, `text.secondary` @ 0.4, centred in the existing 32dp header** |
-| background | system material | `surface.primary` | per platform |
-| scrim | system | black @ 0.5 | per platform |
-
-**Android's missing drag handle is the single most visible parity gap on the platform.** Users
-have no affordance telling them the sheet is draggable.
-
-### 8.8 Toast
-
-| Property | Normative | Android now |
-| --- | --- | --- |
-| radius | 8 | 12 → **8** |
-| padding | 16 all sides | same |
-| icon | 36 | 32 → **36** |
-| icon → text gap | 5 | 8 → **5** |
-| title | 17 / Bold | 16 → **17** |
-| subtitle | 12 / Regular | 16 → **12** |
-| duration | 3300 ms | 2000 → **3300** |
-| background | `feedback.*` | error uses #F44336 → **`text.danger`** |
-| types | 5 (info, success, warning, error, neutral) | 3 → **5** |
-
-**[C]** iOS's current toast radius is 0 (a plain rectangle). That is an omission, not a
-decision. This is the one place the document knowingly departs from the measured iOS value.
-
-### 8.9 Banner
-
-| Property | Normative | Android now |
-| --- | --- | --- |
-| height | 200 | 180 → **200** |
-| radius | 16 | same |
-| title | 34 / Bold | 24 → **34** |
-| foreground icon | 72 | same |
-| background watermark | 36 @ 0.25, 6 × 9 grid | 72 @ 0.20, 5 × 10 → **36 / 0.25 / 6×9** |
-
-### 8.10 Section header
-
-**[M]** Exists only on iOS today. See [§3.7](#37-text-roles) row 2.
+### 3.7 Sheet
 
 | Property | Value |
 | --- | --- |
-| font | 12 / Regular |
-| colour | `text.secondary` |
-| line limit | 1 |
-| padding | 0 additional — spacing comes from the container |
-| gap to the group below | 8 |
+| radius | platform default (iOS system ≈ 12, Android 24) |
+| drag handle | 36 × 5 pill, `text.secondary` @ 0.4, centred in a 32-tall header |
+| background | `surface.primary` |
+| scrim | black @ 0.5, tap to dismiss |
+| detent | 85% of screen height, overridable |
 
-### 8.11 Empty state
+The drag handle is mandatory — without it users have no affordance telling them the sheet is
+draggable.
 
-**[C]** Neither platform has one. iOS renders empty text inline inside a plain card; Android
-uses a bare full-screen `Column` with a 64dp red circle.
+### 3.8 Toast
 
 | Property | Value |
 | --- | --- |
-| font | 12 / Regular |
-| colour | `text.placeholder` |
-| container | inherits from the parent card |
+| radius | 8 |
+| padding | 16 all sides |
+| icon | 36 |
+| icon → text gap | 5 |
+| title | 17 / Bold |
+| subtitle | 12 / Regular |
+| duration | 3300 ms |
+| position | top, below the status bar |
+| types | info, success, warning, error, neutral — background `feedback.*` |
+
+### 3.9 Empty state
+
+| Property | Value |
+| --- | --- |
 | icon | `icon.xl` (64), `text.tertiary` |
+| text | 12 / Regular, `text.tertiary` |
+| container | inherits from the parent card |
 
 ---
 
-## 9. Platform-sanctioned divergences
+## 4. Screens
+
+### 4.1 状态 — Status dashboard
+
+**Purpose:** one scrolling column of live module cards, ranked by relevance.
+**Entry:** default tab.
+**Brand colour:** none of its own — each card carries its module's colour.
+
+**Layout:**
+
+```
+┌─────────────────────────────────────────────┐
+│  状态                          ← large title│  34 / Bold
+│  (daily photo behind, 200 tall)             │
+├─────────────────────────────────────────────┤
+│  ┌───────────────────────────────────────┐  │
+│  │▓ 天气                              ▸ ▓│  │  #FF9500
+│  └───────────────────────────────────────┘  │
+│  ┌───────────────────────────────────────┐  │
+│  │▓ 图书馆                            ▸ ▓│  │  #007AFF
+│  └───────────────────────────────────────┘  │
+│  ┌───────────────────────────────────────┐  │
+│  │▓ 课程                                ▓│  │  #1B5E20
+│  └───────────────────────────────────────┘  │
+│                  ⋮                          │
+└─────────────────────────────────────────────┘
+```
+
+**Top:** large title 状态 at 34 / Bold over a daily photo banner 200 tall. On scroll the title
+collapses into a condensed nav-bar title. Title colour flips black/white by sampling the photo's
+brightness.
+
+**Cards, in relevance order.** Each card publishes a score; cards sort descending and hide when
+negative. Order changes are debounced ~5s to stop jitter.
+
+| Card | Colour | Contains | Shows when |
+| --- | --- | --- | --- |
+| CAS alert | `feedback.error` | 信息门户登录失败 + 重新登录 | CAS session invalid |
+| 天气 | `#FF9500` | Temperature 36 rounded, description, 7-day forecast grid | always |
+| 图书馆 | `#007AFF` | One card per active booking: status, seat number large, location, time range, countdown | has a booking |
+| 课程 | `#1B5E20` | Next-class tip, progress bar if in class, upcoming rows, 周视图/日视图 toggle | has courses |
+| 日程 | `#01579B` | Pending count, nearest item hero with large countdown, next 3 rows | has schedules |
+| 校车 | `#A2845E` | Nearest stop, distance, collapsible per-line rows | CAS logged in, within range |
+| 运动 | `#34C759` | One card per booking: status, area badge, type, time, pay-by deadline + 去支付 | has a booking |
+
+**States:** there is no screen-level empty, loading, or error state. Each card handles its own
+inline — a `ProgressView` while loading, a red strip with 重试 on failure, a text message when
+empty. With every card hidden, the page renders title + photo + background only.
+
+**Refresh:** pull to refresh, plus refresh on returning to the foreground.
+
+**Navigates to:** each module's home, plus sport pay and CAS settings.
+
+**Note:** the CAS alert card is **not** a status card. It is a solid `feedback.error` pill with
+white text, pinned first.
+
+---
+
+### 4.2 课程表 — Course timetable
+
+**Purpose:** a week-by-week grid of class periods.
+**Entry:** tab 1, or the function-grid tile.
+**Brand colour:** `#1B5E20` — but note the grid itself does **not** use it. The screen's accent
+is `text.link` blue; course green appears only on the 状态 course card and the function-grid
+tile.
+
+**Layout — fixed grid, not scrolling cards. The week changes in place.**
+
+```
+┌────┬──────────────────────────────────────┐
+│    │  一     二     三     四     五      │  ← weekday header, 36 tall
+│    │ 9-15   9-16  9-17   9-18  9-19      │     today = surface.tint fill + text.link
+├────┼──────────────────────────────────────┤
+│  1 │ ┌────┐ ┌────┐                       │
+│  2 │ │高清│ │线代│                       │  ← grid cells
+│  3 │ │-教三│ │-教四│                       │     radius 10, padding 2
+│  4 │ └────┘ └────┘                       │
+│  ⋮ │                                      │
+│ 13 │                                      │
+└────┴──────────────────────────────────────┘
+ 42   ↑ period gutter, 13 rows, tap to toggle
+      period numbers ⇄ start/end times
+```
+
+| Element | Value |
+| --- | --- |
+| Week selector bar | status bar + 50 tall |
+| Weekday header | 36 tall |
+| Period gutter width | 42 |
+| Period rows | 13 |
+| Columns | 5 or 7, by the 显示周末 setting |
+| Grid cell radius | 10 |
+| Grid cell padding | 2 |
+| Grid gutter | 2 |
+| Bottom spacing | tab-root rule |
+
+**Week selector** (centre of the top bar):
+
+| State | Line 1 | Line 2 |
+| --- | --- | --- |
+| Viewing current week | 本周 | 第N周 |
+| Viewing another week | 第N周 | 前往本周 button |
+| Before term starts | 放假中 | 前往第一周 button |
+
+**Navigation:** `‹` / `›` buttons, plus horizontal swipe on the grid. Tapping the week label
+opens a week picker (1–20).
+
+**Grid cell — course:** three lines, top-leading: course name (bold), instructor, classroom.
+Cell fill resolves grid colour → course colour → a deterministic hash of the course ID into an
+18-colour pastel palette; text colour auto-contrasts. Course blocks span multiple rows for
+consecutive periods.
+
+**Interactions:**
+
+| Gesture | Action |
+| --- | --- |
+| Tap a course | Opens the course detail |
+| Tap an empty cell | Context menu: 添加, 粘贴 |
+| Long-press a course | Context menu: 编辑, 复制, 剪切, 删除… |
+| Drag after long-press | Moves the block to another empty cell |
+| Tap the period gutter | Toggles numbers ⇄ times |
+
+**Course detail:** info card (colour dot, name, credit, instructor, location) → 给分 card
+(gated on a remote flag and on the course not being user-created) → 关联日程 card (future rows
+then past rows). Top-trailing actions: edit, add schedule, dismiss.
+
+**Background image:** optional user-set photo behind the grid, with two opacity sliders
+(背景 0–0.85, 课程 0.15–1). Grid cells fade toward transparent when a background is set.
+
+**Empty state:** when no term start date is configured, replace the grid with a centred block:
+title + 请设置开学日期后再使用课程表. The top bar still renders.
+
+---
+
+### 4.3 日程 — Schedule
+
+**Purpose:** a to-do list of schedules with countdowns, filterable by group.
+**Entry:** the function-grid tile, or the 状态 schedule card.
+**Brand colour:** `#01579B`.
+
+**Layout:** hero card on top, pinned group tab bar, scrolling list below.
+
+| Element | Value |
+| --- | --- |
+| Hero card | radius 16, `surface.secondary`, padding 16 |
+| Group tab bar | 60 tall, horizontally scrolling |
+| Countdown (hero) | 50 / Bold, white, on a `#01579B` panel |
+| Countdown (row) | 28 / Bold |
+| Countdown (detail) | 72 / Bold |
+| List row card | radius 16, `surface.secondary` |
+| Row spacing | 16 |
+
+**Content:**
+
+1. **Hero card** — the nearest upcoming item: name, begin time, location, related course; and a
+   large countdown on a `#01579B` panel. The panel turns `#FF9500` once the item has passed.
+   Hides on scroll when the list is long.
+2. **Group tab bar** — a leading 全部 chip, then one chip per group with a count badge.
+   Selected chip is marked by a 50 × 6 rounded underline that slides between chips. A trailing
+   chevron opens the group manager.
+3. **Group manager** — drops down over a scrim. Header: + (new group) and 编辑位置. Body: one
+   row per group with icon, name, count, and the group's first upcoming schedule.
+4. **List** — future items first, ascending; a divider; then past items, descending. Each row:
+   name, begin time, related course, and a right-aligned countdown.
+
+**Countdown units:** below 1 minute floors to 1 分钟; then 分钟 → 小时 → 天.
+
+**Detail:** a 300-wide card over a scrim. Header shows the countdown at 72 / Bold on the same
+`#01579B` (or `#FF9500`) panel. Body: name, time range, location, note, related course.
+Actions: edit and delete.
+
+**Empty state:** 无日程 in the list; 无群组 in the group manager.
+
+---
+
+### 4.4 图书馆 — Library
+
+**Purpose:** seat and room booking.
+**Entry:** the function-grid tile, or the 状态 library card, or the `ham://library` deep link.
+**Brand colour:** `#007AFF`.
+
+**Home layout — scrolling column, in this order:**
+
+1. **Banner** — 200 tall, radius 16. A paged carousel: page 1 is always 图书馆公告 with a 72
+   icon over a tiled watermark grid; further pages come from remote config and link to web
+   content or a full-text view. 5s auto-advance, page dots when there is more than one page.
+2. **Retry-login card** — solid `feedback.error`, white text, 登录信息过期 + 点击重新登录.
+   Only when the session token has expired.
+3. **Analytics card** — gated on two flags (a remote flag **and** a local opt-in). Two states:
+   a consent prompt (同意 / 不同意), and once consented, one row per request group with a bar
+   strip (orange below 50%, green above) and a success rate.
+4. **Current-booking cards** — one per active booking. A full-width status band, then the seat
+   number large, location, and time range. Expanding reveals 刷新, 在地图打开, 变更或取消预约.
+5. **Divider** — only when there is a booking.
+6. **Quick-book card** — only when a seat resolves (preferred seat wins, else last booking).
+   Seat row → seat picker; time row → time picker; then a full-width 预约 button.
+7. **Function card** — 150 tall, two columns. Left, full height: 查看房间 with a 64 icon.
+   Right, two stacked halves: 历史预约 and 设置, each with a 32 trailing icon.
+8. **Print card** — 打印 / 在图书馆公共打印机打印. Full width, below the function card.
+
+**Other screens:**
+
+| Screen | Purpose | Primary action |
+| --- | --- | --- |
+| 连接图书馆 | CAS verification gate, shown when not authenticated | Complete verification |
+| 查看房间 | Pick a building, room, and time; browse the seat grid | 预约 |
+| 选择座位 | Reusable seat picker returning a seat | 选择 |
+| 快速预约 | Fires the booking automatically on entry | none (automatic) |
+| 变更预约 | Change time, or swipe to cancel | 确定 / swipe |
+| 历史预约 | Read-only grouped list | none |
+| 设置 | Account, captcha, preferred seat, analytics, local data | none |
+| 首选座位 | Seat + time + weekday rules, with 电源 / 靠窗 preferences | Add a rule |
+| 图书馆公告 | Renders the notice HTML | none |
+| 打印 | Pick a file, choose options, submit to a campus printer | 提交任务 |
+
+**States:** empty blocks are omitted rather than shown as placeholders. Errors surface as a
+toast, plus the red retry-login card on token expiry.
+
+---
+
+### 4.5 运动 — Sport
+
+**Purpose:** sports venue booking.
+**Entry:** the function-grid tile, or the 状态 sport card.
+**Brand colour:** `#34C759`.
+
+**Home layout — scrolling column, in this order:**
+
+1. **Banner** — 200 tall, radius 16. Page 1 is always 场馆预定公告 with a 72 icon over a tiled
+   ball grid → the bulletin list. Further pages are bulletins: title, date, excerpt, 查看详情.
+   5s auto-advance.
+2. **Current-order cards** — one per booking. A blue status strip, an area badge, type and
+   venue, time range; when unpaid, a divider plus either a red 请于X前完成支付 or
+   当前未处于可支付时间, and a 去支付 button.
+3. **Divider** — only when there is an order.
+4. **Quick-order card** — only when a venue resolves (starred venue, else last order). Venue
+   row with an orange 收藏 pill when it matches the starred venue; a 今天/明天 segmented
+   control; a full-width 预定 button.
+5. **Function card** — 150 tall, two columns. Left, full height: 查看场馆 with a 64 icon.
+   Right, two stacked halves: 订单中心 and 设置, each with a 32 trailing icon.
+
+**The area/order screen** is the core transaction:
+
+- **Pinned header:** sport-type chip strip, and a date row defaulting to tomorrow after 18:00.
+- **Scrolling body:** one collapsible card per venue — image 85 square, title, address, red
+  已闭馆 when closed, `¥{lowPrice}起`, a collapsed time-summary strip, and when expanded one
+  row per court expanding to a slot grid. Slot tile: selected → start/end + 已选择 in white on
+  green; unselected → start/end, price, remaining capacity, and a 预定 strip.
+- **Pinned footer:** the current selection and the 预定 button → captcha → create order.
+
+**Other screens:** 连接体育场所预定 (CAS gate), 选择 (returns a selection instead of ordering),
+输入验证码, 支付, 快速预约, 收藏预定设置, 订单中心 (a webview), 公告 list and detail, 运动设置,
+预定成功, 预定失败.
+
+**States:** unload (form) / loading (centred spinner) / error (with 返回) / success.
+
+---
+
+### 4.6 成绩 — Score
+
+**Purpose:** grades, GPA, and F2 calculation.
+**Entry:** the function-grid tile. There is no score card on 状态.
+**Brand colour:** `#FF9500`.
+
+**Home layout — scrolling column, in this order:**
+
+1. **Stat card** — 成绩概览, GPA as a hero value, average score, then a divider and one row
+   per academic year (大一…大五). Crown watermark at 128 @ 0.12.
+2. **Function card** — three equal buttons: 获取成绩, 选择, 设置.
+3. **Semester cards** — one per term, sorted descending. Header: `{year}-{year+1} 第N学期`,
+   average and GPA; trailing control is a collapse chevron normally, a 全选/全不选 toggle in
+   select mode. Body: score rows, 8 apart.
+4. **Score row** — a 6 × 28 colour bar, then two lines (name + instructor on the first,
+   course type + credit on the second), then the score at 22 / Bold. `--` when absent,
+   strikethrough when excluded from the F2 selection. Trailing: a comment button normally, a
+   checkbox in select mode.
+5. **Pinned selection header** — appears only in select mode: 综测成绩, 平均成绩, GPA, credit
+   breakdown, and a 退出 button.
+6. **Privacy blur overlay** — a full-screen blur applied when the app backgrounds, so grades
+   are hidden in the app switcher.
+
+**Other screens:** 获取成绩 (update sheet: CAS login → captcha → 正在更新 → 获取成功/失败),
+成绩设置, 成绩启用, 连接成绩 intro, Face ID enable, JS calc picker (an RN marketplace) and
+detail, Face ID error.
+
+---
+
+### 4.7 课程评分 — CourseScore
+
+**Purpose:** course reviews and grade distributions.
+**Entry:** the function-grid tile, or the comment button on a score row.
+**Brand colour:** `#283593`.
+
+| Screen | Purpose |
+| --- | --- |
+| Search home | Search bar, search history card, external-service card, and a 我的数据 entry |
+| Search results | Ranked matches with filter chips |
+| Course detail | Rating, grade distribution, comments, my review |
+| 我的数据 / Course center | Three tabs: 我的评价, 想上, 排行榜 |
+| Create review | Star rating + comment |
+| Comments | Full comment thread |
+
+**Course detail** is the densest screen: a rate card (overall score as a hero value), a
+grade-distribution card with one weighted bar per band, a function card, the user's own review
+card if any, and the comment thread.
+
+---
+
+### 4.8 我的 — My
+
+**Purpose:** account hub and navigation.
+**Entry:** tab 3.
+**Brand colour:** none — the page is neutral; each function tile carries its own module colour.
+
+**Layout — scrolling column:**
+
+1. **Collapsing header** — a background image with a large title that shrinks into the nav bar
+   on scroll. The title comes from remote config; when the user is signed in it is replaced by
+   their avatar and nickname, falling back to 未登录.
+2. **User-center card** — shown when the account feature is enabled. Avatar, nickname, and the
+   sign-in / account action.
+3. **Function grid** — the module shortcuts from [§1.2](#12-navigation-hub-the-function-grid).
+   Horizontally scrolling, each tile tinted with its module colour.
+4. **Board card** — remote-config announcement with markdown content. Only when configured.
+5. **Promotion card** — remote-config promotional entries.
+6. **Settings card** — a flat list: 自动化 / 添加Siri捷径, 使用指南, 反馈, 关于, plus a
+   debug entry in debug builds.
+
+**Settings hub** (a pushed screen, not the card): 小组件, 自动化操作, 语言, 关于.
+
+**About:** logo, version, changelog, and actions (前往 App Store, 复制课程信息, 来 Github 找我,
+分享日志).
+
+---
+
+## 5. Shared flows
+
+### 5.1 CAS verification gate
+
+Several modules sit behind the university's 信息门户 (CAS) single sign-on. The pattern is
+identical everywhere:
+
+1. User enters a module without a valid session.
+2. After a short delay (0.3s), an intro sheet slides up: module icon, title, a one-line
+   explanation, and a 登录 button.
+3. Tapping opens the CAS web login. On iOS the module often presents its own sheet; Android
+   navigates an internal graph.
+4. Terminal states: a spinner, then 验证成功 (auto-dismiss) or 验证失败 with 重新登录.
+5. Dismissing without logging in pops back to where the user came from.
+
+**Colours:** the intro uses the module's brand colour. Failure states use `feedback.error`.
+
+### 5.2 Captcha
+
+The education and sport flows route a CAPTCHA through a bundled local HTML page
+(`education-captcha-page.html`, `sport-captcha-page.html`) and receive the token back through a
+platform bridge. Include a 刷新 action.
+
+### 5.3 Sign-in
+
+A shared login screen offers the available providers. Brand-coloured social buttons use their
+own colours, not the app palette.
+
+### 5.4 Web content
+
+Remote-config banners and announcements render three ways: an in-app webview push, an external
+browser, or a full-text view rendered from a string. Pick by the config entry's action type.
+
+---
+
+## 6. Platform rules
 
 These **must** differ and are not defects:
 
-- **Safe areas and status bars** — iOS safe-area insets; Android `statusBarsPadding()`.
-- **Navigation affordances** — iOS edge-swipe back; Android system back.
-- **System pickers** — date, time, album, and document pickers are platform-supplied.
-- **Native controls** — switch, slider, and progress use each platform's native rendering
-  ([§8.6](#86-controls)). Do not build custom cross-platform versions.
-- **Navigation chrome** — iOS uses `UINavigationController`; Android renders an in-Compose
-  header. Specify the resulting offset, not the implementation.
-- **Widget configuration** — Android exposes an update-interval picker; WidgetKit owns refresh
-  scheduling, so iOS correctly has no such screen.
-- **Language** — Android has an in-app locale picker; iOS follows the system locale.
-- **Type scaling** — Dynamic Type and sp both respond to OS font-size settings, with different
-  curves. Values here are at the default scale.
-- **Dark-mode mechanism** — asset catalogs vs `values-night`. Both must reach the same hexes.
+| Area | iOS | Android |
+| --- | --- | --- |
+| Status bar / safe areas | safe-area insets | `statusBarsPadding()` |
+| Back navigation | edge swipe | system back |
+| Navigation chrome | `UINavigationController` | in-Compose header |
+| Native controls | SwiftUI `Toggle` / `Slider` / `ProgressView` | Material3 |
+| System pickers | platform-supplied | platform-supplied |
+| Widget configuration | none — WidgetKit owns refresh | in-app update-interval picker |
+| Language | follows system locale | in-app locale picker |
+| Type scaling | Dynamic Type | sp |
+| Dark mode | asset catalogs | `values-night` |
+
+Specify the **result** (content begins below a 42-tall header plus the status bar), not the
+implementation.
 
 ---
 
-## 10. Undecided
+## 7. Undecided
 
-Needs a maintainer call before the relevant PR lands:
+Needs a maintainer call before implementation:
 
-1. **Chevron size.** iOS 8pt (22 sites) vs Android's default 24dp. Proposal: **12**.
-2. **Sheet radius.** iOS system ~12pt vs Android 24dp. Proposal: **keep Android at 24** — it
-   suits large screens and iOS's value is system-controlled, so we cannot move it anyway.
-   Document it rather than fight it.
-3. **Stage the type change?** The `headline` 14 → 17sp bump is the largest reflow. Land the
-   non-type fixes first, or one PR with full visual review?
-4. **Toast radius.** Spec says 8; measured iOS value is 0. Confirm this deliberate departure.
-5. **Body 17 vs 16.** iOS-as-baseline says 17, but Android's 16sp is tokenised and used 240
-   times, and 10 of iOS's own raw `.system(size:)` sites are already at 16. Confirm 17, or
-   accept 16 as a documented exception?
-6. **Elevation.** This document specifies none, matching both platforms. Confirm we are not
-   adding shadow as part of this work.
+1. **Body 17 vs 16.** iOS-as-baseline says 17; Android's 16sp is tokenised across 240 call
+   sites, and 10 of iOS's own raw size declarations are already at 16.
+2. **Chevron size.** Spec says `icon.xs` (12). iOS currently writes 8 in 22 places, Android
+   uses the Material default 24.
+3. **Stage the type change?** Raising Android `headline` 14 → 17 is the largest reflow in the
+   migration. Land non-type fixes first, or one pass with full visual review?
+4. **Toast radius.** Spec says 8; the shipped iOS value is 0 (a plain rectangle, presumably an
+   oversight).
+5. **Elevation.** Spec says none, matching both platforms. Confirm we are not adding shadow as
+   part of this work.
 
 ---
 
-## 11. Review checklist
+## 8. Current divergences
+
+What the two shipped clients do differently today. Each entry is a task, not a spec.
+
+### 8.1 Feature gaps
+
+| Gap | Detail |
+| --- | --- |
+| Print is Android-only | iOS ships `Ham/shared/business/print/` — PrintApi, PrintCasClient, PrintRequestHelper, PrintService — compiled into the target but referenced by nothing. No route, no strings, no view. The data layer is complete; only UI is missing. |
+| Sport status card is iOS-only | Android's `StatusViewCardType` lists no `Sport`. |
+| Android schedule status card is an empty stub | `ScheduleCard.kt` has zero call sites; iOS renders one. |
+| Android weather card shows no data-source attribution | iOS links Apple's required WeatherKit attribution. Android fetches CMA data with a spoofed browser UA and displays no credit. |
+| RN bundles are 6 commits apart | Android at `4f3d241`, iOS at `0939555`; one of the six is a bug fix. |
+| Language and widget settings are Android-only | May be correct as-is — see platform rules. |
+
+### 8.2 Colour wiring (Android)
+
+| Defect | Location |
+| --- | --- |
+| `ham_brand_sport` / `ham_brand_score` resolve to Material colours (#4CAF50 / #FF9800) while the correct hexes sit unused in `colors.xml` | `Color.kt:79,82` vs `colors.xml:73,75` |
+| `ham_text_secondary` is hardcoded Compose `Gray`, not a resource — no dark variant | `Color.kt:29` |
+| 退出登录 renders #FF0000 in one place and #F44336 in another for the identical string | `SyncLogoutView.kt:49` vs `UserCenterMainView.kt:183` |
+| `<color name="link">` defined and referenced by zero Compose files | `colors.xml:14` |
+| `dimens.xml` is dead and its values contradict the live font scale | `core/ui/.../values/dimens.xml` |
+
+### 8.3 Type (Android)
+
+| Defect | Location |
+| --- | --- |
+| `largeTitle` has zero call sites | `Font.kt:16` |
+| `title2` and `title3` are both 16sp, identical to `body` | `Font.kt:18,20` |
+| `headline`, `caption`, `caption2` declare no `fontWeight` | `Font.kt:30,34,38` |
+| Five tokens declare no `color`, so hero numbers render uncoloured | `Font.kt:16-32` |
+| `MaterialTheme.typography` — the only three `lineHeight` declarations — is referenced zero times | `HamTheme.kt:85-109` |
+| 24 raw `fontSize = N.sp` sites bypass `HamFontStyle` | various |
+| 23 of 66 `maxLines` sites lack `TextOverflow.Ellipsis` | various |
+| The same seat number renders at 24sp, 32sp, and 36sp | three files |
+
+### 8.4 Type (iOS)
+
+| Defect | Location |
+| --- | --- |
+| No font, spacing, or shadow token file exists | `Ham/shared/` |
+| 151 raw `.font(.system(size:))` sites — 123 (81%) are SF Symbol icon sizing and belong in an icon scale, not a type scale | various |
+| Three de-facto secondary colours: `ham_text_t2Color` (113), raw `.gray` (38), raw `.secondary` (34, a different colour) | various |
+| `Color.lightGray` #F0EFEF vs `Color.ham_lightGray` #EDEEEF — two greys under near-identical names | `Color+Ham.swift:45` vs `:31` |
+| No tabular figures on the course period rail or sport clock times | two files |
+
+### 8.5 Component and behaviour bugs
+
+| Defect | Location |
+| --- | --- |
+| Fill uses radius 10 while the clip uses radius 16 — visible corner artefact | `CourseViewDetailCourseInfoView.swift:27` vs `:31` |
+| Segmented thumb radius 5 ≠ track radius 6 | `HorizontalPicker.kt:57,70` |
+| `SportSelectItemView.kt:45` is a verbatim clone of `HamCardView` | feature/sport |
+| Two competing Android shared cards: `HamCardView` (r16) and `CommonStatusCard` (r12) | core/ui vs feature/status |
+| `PrintSheet.kt` is an empty stub; `PrintStatusCard.kt` is never called | feature/print |
+| Android's 在地图打开 is a no-op; iOS implements it | `ReservedCard.kt:91-98` |
+| Android omits 添加到系统日历 where iOS has it commented out — inverted | library |
+| iOS `AboutPrivacyView` renders a markdown link as unstyled, untappable text | `Ham/iOS/ui/about/` |
+| Android duplicates the markdown-link parser verbatim in two files | `LoginView.kt`, `AboutView.kt` |
+| `enabled = false` blocks the click but not `awaitFirstDown`, swallowing the touch | `Button.kt:65` |
+| `CourseThemeSelectView.kt:124` passes `enabled = !selected` while a ternary sets the colour — no visual effect | feature/course |
+| Android silently removes the sport current-order block on error — no inline error or retry | `SportMainViewCurrentOrderCard.kt:60` |
+| Neither platform has a loading state on the sport main screen, though iOS's view model tracks one | `SportMainViewModel.swift:19` |
+| 21 Android and 27 iOS hand-rolled cards bypass the shared primitive | various |
+| Android has no shared section-header component; iOS has it in one screen only | — |
+| No minimum tap target enforced: Android's smallest is 16×16dp, iOS's ~14×14pt | various |
+
+---
+
+## 9. Review checklist
 
 - [ ] Padding, radius, font, and colour all come from a token here.
 - [ ] Every colour has a light and a dark value and is an adaptive resource.
 - [ ] Text styles are explicit — no relying on an inherited default size.
-- [ ] No new literal numbers in view code.
-- [ ] `maxLines`/`lineLimit` set per [§3.4](#34-truncation), with `Ellipsis` on Android.
 - [ ] Interactive elements meet the 44 minimum tap target.
-- [ ] The same screen exists on the other platform with the same numbers, or the divergence is
-      listed in [§9](#9-platform-sanctioned-divergences) or [§10](#10-undecided).
+- [ ] `maxLines` is paired with `Ellipsis` on Android.
+- [ ] The same screen exists on the other platform, or the divergence is listed in
+      [§6](#6-platform-rules) or [§8](#8-current-divergences).
 - [ ] Verified in light and dark mode.
 - [ ] Verified with a populated account — empty states hide spacing and type differences.
-
----
-
-## Appendix A — Known defects
-
-Found while measuring. These are bugs, not style gaps, and most are one-line fixes.
-
-### Colour wiring (Android)
-
-| # | Defect | Location |
-| --- | --- | --- |
-| 1 | `ham_brand_sport` / `ham_brand_score` / `ham_green` / `ham_orange` / `ham_red` resolve to Material colours while the correct hexes sit unused in `colors.xml` | `Color.kt:53,60,63,79,82` vs `colors.xml:72,73,75` |
-| 2 | `ham_text_secondary` is hardcoded Compose `Gray`, not a resource — cannot dark-mode | `Color.kt:29` |
-| 3 | `values-night/colors.xml` keeps `gray` at #888888, so Android secondary text has **no dark variant at all** | `values-night/colors.xml:13` |
-| 4 | 退出登录 renders in pure red #FF0000 in one place and #F44336 in another, for the identical string | `SyncLogoutView.kt:49` vs `UserCenterMainView.kt:183` |
-| 5 | `<color name="link">#007AFF</color>` defined and referenced by zero Compose files | `colors.xml:14` |
-| 6 | `dimens.xml` is dead (`R.dimen`: 0 hits) **and its values contradict the live font scale** — title 32 vs 24, title2 26 vs 20, title3 18 vs 16, headline 18 vs 14, caption2 10 vs 11 | `core/ui/.../values/dimens.xml` |
-
-### Type (Android)
-
-| # | Defect | Location |
-| --- | --- | --- |
-| 7 | `largeTitle` (28sp) has zero call sites | `Font.kt:16` |
-| 8 | `title2` and `title3` are both 16sp — identical to `body`. Three names, one size. | `Font.kt:18,20` |
-| 9 | `headline`, `caption`, `caption2` declare no `fontWeight` | `Font.kt:30,34,38` |
-| 10 | `largeTitle`/`title`/`title2`/`title3`/`headline` declare no `color`, so hero numbers render uncoloured | `Font.kt:16-32` |
-| 11 | `MaterialTheme.typography` (with the only three `lineHeight` declarations in the codebase) is referenced zero times | `HamTheme.kt:85-109` |
-| 12 | 24 raw `fontSize = N.sp` sites bypass `HamFontStyle` entirely | various |
-| 13 | 23 of 66 `maxLines` sites have no `TextOverflow.Ellipsis` — hard-clip with no ellipsis | various |
-| 14 | The same seat number renders at three different sizes: 24sp, 32sp, 36sp | `SelectSeatCard.kt:287`, `LibraryMainViewQuickBookCard.kt:74`, `LastBookingCard.kt:38` |
-
-### Type (iOS)
-
-| # | Defect | Location |
-| --- | --- | --- |
-| 15 | No font, spacing, or shadow token file exists at all | `Ham/shared/` |
-| 16 | 151 raw `.font(.system(size:))` sites — though 123 (81%) are SF Symbol icon sizing, not typography, and should become an icon scale instead | various |
-| 17 | Three de-facto secondary colours: `ham_text_t2Color` (113 uses), raw `.gray` (38), raw `.secondary` (34 — a different colour entirely) | various |
-| 18 | `Color.lightGray` #F0EFEF vs `Color.ham_lightGray` #EDEEEF — two greys under near-identical names | `Color+Ham.swift:45` vs `:31` |
-| 19 | Course-period rail and sport clock times have no tabular figures, so digits jitter | `CourseViewBodyCourseNumView.swift:63`, `SportOrderViewAppointmentAreaCell.swift:146` |
-
-### Component bugs
-
-| # | Defect | Location |
-| --- | --- | --- |
-| 20 | Fill uses radius 10 while the clip uses radius 16 — visible corner artefact | `CourseViewDetailCourseInfoView.swift:27` vs `:31` |
-| 21 | `HamHorizontalPicker` thumb radius 5 ≠ track radius 6 | `HorizontalPicker.kt:57,70` |
-| 22 | `SportSelectItemView.kt:45` is a verbatim clone of `HamCardView` in a file that never imports it | `feature/sport/.../SportSelectItemView.kt` |
-| 23 | Two competing Android shared cards: `HamCardView` (r16, `core/ui`) and `CommonStatusCard` (r12, `feature/status`, 8 call sites) | — |
-| 24 | `PrintSheet.kt:13` is an empty stub; `PrintStatusCard.kt` is never called from any screen | `feature/print/` |
-| 25 | `ScheduleCard.kt` (status) has zero call sites — iOS renders one | `feature/status/` |
-| 26 | iOS `AboutPrivacyView.swift:12-18` renders a markdown link as unstyled, untappable text | `Ham/iOS/ui/about/` |
-| 27 | Android duplicates the markdown-link parser verbatim in two files | `LoginView.kt`, `AboutView.kt` |
-| 28 | `enabled = false` blocks the click but not `awaitFirstDown`, so the touch is swallowed silently | `Button.kt:65` |
-| 29 | `CourseThemeSelectView.kt:124,170` pass `enabled = !selected` while an explicit ternary sets the colour — no visual effect | `feature/course/` |
-| 30 | iOS print data layer ships compiled and unreferenced — no route, no strings, no view | `Ham/shared/business/print/` |
