@@ -63,6 +63,59 @@ in the codebase today and must not be used in new copy.
 | 23 | Other (as in "other settings") | **其他** | 其它 | 其它 is a variant form. |
 | 24 | Numbers below ten | **1** | 一 | `还有不到1分钟`, not 还有不到一分钟. |
 
+### 2.1 Further concepts
+
+Mined from the full screen audit — 38 more concepts with more than one wording in the codebase.
+
+| # | Concept | ✅ Use | ❌ Not | Notes |
+| --- | --- | --- | --- | --- |
+| 25 | A user-written course review | **评论** | 评价 | 评论 outnumbers it 3:1, names the API and analytics surface, and 评价 collides with the star rating 评分. The split is baked into file names, route names and resource keys. |
+| 26 | The sport venue | **场馆** | 体育场所, 运动场馆, 运动场地 | Four words today. 场馆 is shortest and is what the proper-noun exception already uses. |
+| 27 | Yesterday | **昨日** | 昨天 | The standard already mandates 今日/明日 for read-only readouts; a third member should match. |
+| 28 | Location permission missing | **未获取地理位置权限** | 未获取地理权限 | 地理 alone is a truncation. |
+| 29 | The library statistics feature | **数据统计** | 统计服务 | One feature, one name. |
+| 30 | Captcha settings | **验证码识别设置** | 验证码设置 | The feature is OCR of the captcha, not captcha entry. |
+| 31 | Average (course score) | **均分** | 平均 | Already the wording bound to a sort chip. |
+| 32 | Grade / score (course score) | **成绩** | 分数 | 6:1 majority; the outlier sits on a card titled 成绩排行. |
+| 33 | Counting people | **位同学** | 人 | 人 is bare. |
+| 34 | Comment length | **字数** | 长度 | The unit shown is 字, so 字数 is the literal match. |
+| 35 | "This course" | **这门课** | 这门课程, 该课程 | 该课程 is bureaucratic register. |
+| 36 | Library account card | **账号信息** | 图书馆账号信息 | The card is already inside the library settings screen. |
+| 37 | Booking-history screen title | **历史预约** | 历史记录 | Matches the entry-row label; 记录 is generic. |
+| 38 | The course-review module name | **给分** | 课程评分 | 给分 is everything the user sees; 课程评分 survives only as a dead string. |
+| 39 | "Want to take this course" | **想上** | 想上这门课, 想上课程 | Empty state should read 没有想上记录. |
+| 40 | "Go to settings" link | **去设置** | 前往设置, 请前往"设置"开启 | The full sentences are a different construct, but the curly-quote form should be normalised. |
+| 41 | "Go to X" — the bare verb | **前往X** | 去X | 去X reads as a verb phrase and cannot host a link style. Note 去 is also a real verb elsewhere (去支付, 去选择), so the collision is live. |
+| 42 | Select, as a button noun | **选择** | 选取 | 选取 appears on exactly one screen. |
+| 43 | Changing an existing booking | **更改** | 变更, 修改 | 变更 is administrative register. One screen currently mixes all three for the same action. |
+| 44 | Second person | **你** | 您 | 82% of the corpus. Shifting to 您 on three surfaces is an unforced register break. |
+| 45 | Course timetable, abbreviated | **课程表** | 课表 | The 重置/已重置 toasts are the outliers. |
+| 46 | Available capacity | **可用** (capacity) / **剩余** (counts) | 空余, 多余, 余, 共剩余 | 多余 literally means *superfluous* and is simply wrong for "no seats left". |
+| 47 | "Not found" | **没有找到X** | 未找到 | Two different negative verbs for the same state. |
+| 48 | The time-window field | **开始时间 / 结束时间** | 时间, 持续时间 | Already the established pair on three screens; iOS's bare 时间 says nothing. |
+| 49 | Seat attribute filters | **偏好** (section), **电源 / 靠窗** (rows) | 附加条件, 仅 | iOS ships an icon with 仅 and no object — unreadable without colour. |
+| 50 | Failure noun | **错误** | 异常 | 异常 is a developer term leaking into user copy, in three bus/weather/print strings. |
+| 51 | The legal document agreed at login | **用户使用协议** | 《用户使用协议》, 隐私协议, 用户隐私协议 | The two platforms currently link **different documents** under different names. |
+| 52 | The automation feature | **自动化操作** | 自动化, 自动化功能 | Matches the hub row. |
+| 53 | The scheduled library task | **自动快速预约** | 图书馆快速预约, 图书馆自动化 | Notifications should reuse the switch label. |
+| 54 | Copy-course-log action | **复制课程信息** | 复制课程回包日志 | 回包 is network jargon. iOS got this right. |
+| 55 | Widget refresh interval | **更新间隔** | 编辑小组件更新时间 | The control is a picker, not an editable field. |
+| 56 | The course widget | **课程表小组件** | 课程与图书馆小组件 | The tip's 课程 is a half-word. |
+| 57 | About screen title | **关于Ham** | 关于 | Unambiguous in a nav bar. iOS also keys the same word twice. |
+| 58 | "Needs" in length counters | **需** (chip) / **需满足** (sentence) | 需要 | One counter must not carry both forms. |
+| 59 | The module's statistics opt-in | **数据统计** | 统计服务 | See row 29. |
+| 60 | Study-time total | **共计X分钟** | 累计学习X分钟 | The Android variant is dead. |
+| 61 | Course-review module badge | **给分** | 课程评分 | See row 38. |
+| 62 | Unbind a social account | **解绑** | — | Neither platform currently lets a user do this; the copy exists but the action does not. |
+
+**Correction to row 9:** 收藏座位 and 首选座位 are distinct concepts, but the iOS entry point
+mislabels one as the other — the home badge and settings card header read 收藏座位 while the
+screen they open is titled 首选座位设置.
+
+**Borderline, no change recommended:** 去支付 (action) vs 待付款 (state) — arguably two concepts,
+both stable and used consistently within their own screen.
+
+
 ### Exceptions to rule 1
 
 Two strings keep 场馆预约 because it is a **proper noun** — the WeChat mini-program's real name:
@@ -128,6 +181,18 @@ expected. What must match across platforms is the **word order and spacing aroun
 Also check that the placeholder carries the **same information**, not just the same position —
 iOS renders a bare `328m` where Android renders `距你328m`. Those are different strings, not a
 formatting difference.
+
+#### Number precision
+
+Precision is part of the copy, not just the format. Today it drifts:
+
+| Value | iOS | Android | Should be |
+| --- | --- | --- | --- |
+| GPA | `%.2f` | `%.6f` | `%.2f` |
+| Credits | `%.1f` | `%.2f` | `%.1f` |
+| Course rate average | `%.1f` | `%.2f` | `%.1f` |
+
+A student sees `4.00` on one platform and `4.000000` on the other for the same course.
 
 ---
 
@@ -274,18 +339,40 @@ Every user-visible string lives in a strings file. No exceptions.
 
 The current gap is lopsided and worth stating plainly:
 
-| Platform | Hardcoded sites | Production files affected |
-| --- | --- | --- |
-| iOS | **175** | **59** |
-| Android | **3** | 3 |
+A full-screen audit of every screen found **282 hardcoded CJK literal sites**, by module:
 
-Only one of the 175 iOS sites is in a test or preview file — this is real shipped code.
-Concentrated in library (10 files), sport (12), schedule (5), score (3). `CasSettingView.swift`
-is **entirely** unlocalized — eight strings including 登录状态, 已登录, 登录状态失效, 重新登录,
-未登录, 其它设置.
+| Module | Hardcoded CJK literals |
+| --- | --- |
+| Sport | **76** |
+| Library | **70** |
+| My / user center | **67** |
+| Shared | **27** |
+| Status | **18** |
+| Score + schedule | **21** |
+| Course | **2** |
+| CourseScore | **1** |
+| **Total** | **282** |
 
-Android's three include `Text("关闭")` in the shared bottom-sheet component, which surfaces in
-every language.
+This supersedes the earlier per-file grep (175 sites across 59 files) — that count missed
+literals inside interpolations, model-level status names, and bare `Text(_: StringProtocol)`
+calls, which do **not** localise even when a matching catalog key exists.
+
+Notes:
+
+- **Library is the worst module**: 42 distinct Chinese literals plus 3 `-` separators and 2
+  `Hello, World!` stubs, across **20 files** (not 10). iOS hardcodes roughly 30 library labels
+  that already exist in `Localizable.strings`.
+- **Sport hardcodes its status names in the data model** (待付款 / 待使用 / 使用中 / 已使用 /
+  已取消 / 已退款 / 未知), passed through `.localized` at the call site, so they resolve only if
+  a matching catalog key happens to exist.
+- **Android's Debug screen is absent from all `.lproj`/`values-*` files** — it is entirely
+  English.
+- Android's three include `Text("关闭")` in the shared bottom-sheet component, which surfaces in
+  every language.
+- **Server-driven copy with no fallback**: ten categories of user-visible text arrive from CCKV
+  or the server with no catalog fallback on either platform — consent messages, external-service
+  titles, want/comment card titles and hints, the comment-disabled reason, the not-found message,
+  the comment input hint, and the course-centre card titles.
 
 ### Plurals
 
@@ -310,6 +397,46 @@ Numbers, dates, and times are formatted by the platform, never string-concatenat
 ## 7. Current state
 
 The gap list. Each entry is a task.
+
+### 7.0 Findings from the full screen audit
+
+Auditing all 68 screens surfaced far more than the earlier spot checks did.
+
+| Category | Count |
+| --- | --- |
+| Split terminology concepts | 38 (see [§2.1](#21-further-concepts)) |
+| Wrong or nonsensical string values | 60 |
+| Same UI element, different word across platforms | 92 |
+| Placeholder / format inconsistencies | 36 |
+| Tone breaches | 28 |
+| Punctuation / spacing breaches | 49 (83 half-width-colon instances vs 32 correct) |
+| Hardcoded CJK literals | 282 (see [§6](#6-localization-requirements)) |
+| Missing translations, junk and dead strings | 101 |
+
+**Ten most important:**
+
+1. **评价 / 评论 / 评分 three-way split** in CourseScore — `创建评价` vs `课程评论` vs
+   `已成功发布课程评分与评论`. Baked into file names, route names and resource keys.
+2. **`cas_bus_success_message` = `你可以开始使用图书馆了`** — the 校巴 success screen tells users
+   they can use the library.
+3. **Privacy copy is self-contradictory** — `Ham承诺…不会收集您的任何个人信息。…如果您认为Ham应该收集您的个人信息，您可以终止使用本应用。`
+   Shipped verbatim on both platforms.
+4. **Nine iOS `String(localized:)` literals have no catalog entry and render as raw keys** —
+   存在冲突的课程, 保存失败, 保存颜色失败, 已已保存背景颜色, 保存课程基础信息失败, 已保存基础信息,
+   已重置课程时间. Note `已已保存` is itself a typo.
+5. **Numeric precision drift** — GPA `%.2f` vs `%.6f`, credits `%.1f` vs `%.2f`, rate average
+   `%.1f` vs `%.2f`. The same course reads differently per platform.
+6. **`用户名输入有误` / `用户名不能大于20个字符`** on a field whose hint is 昵称.
+7. **Key `本周课程已上完` → value `本周的课程已经全部结束啦～辛苦啦！💪`** — key/value contradiction
+   plus four tone breaches in one string; the ja translation carries it too.
+8. **Android's `feature/my`, `feature/auth` and `feature/cas` ship no `values-en` / `values-ja`**
+   — widget, login, SSO consent and CAS are Chinese-only.
+9. **Sport venue noun has four words** — 体育场所 / 场馆 / 运动场馆 / 运动场地.
+10. **Colon chaos** — 83 half-width `CJK: ` instances against 32 correct; one row in the score
+    screen mixes both styles.
+
+**Clean areas worth protecting:** the library and user-center modules have zero emoji, zero `！`,
+zero cutesy particles, and no terminal `。` on any label, button, toast or status string.
 
 ### 7.1 iOS catalog sprawl
 
@@ -341,13 +468,24 @@ concrete defects fall out of it:
 
 ### 7.3 Wrong values behind right-sounding keys
 
+Three keys whose value contradicts their purpose. The full list of 60 is summarised in
+[§7.0](#70-findings-from-the-full-screen-audit).
+
 | Issue | Where |
 | --- | --- |
 | `"CONFIRM" = "更改"` — the confirm key renders "change" | `Localizable.strings:104` |
 | `"CANCEL" = "返回"` — the cancel key renders "back" | `Localizable.strings:86` |
 | `cas_bus_success_message` = 你可以开始使用图书馆了 — a 校巴 string that says 图书馆 | `feature/cas/.../strings.xml:23` |
 
+Also from the screen audit: `未知倒序` (a sort chip reading "unknown descending order"),
+`在课表空白处长按…在课程出长按…` (`课程出` is a typo for `课程处`, shipped on **both** platforms),
+`评论长度不合法` (不合法 is administrative register; the sibling screen says 评论字数未符合要求),
+and `服务器没有返回数据` (a protocol description, not user copy).
+
 ### 7.4 Junk and dead strings
+
+101 items found: 22 junk, 30 dead, 10 key/value mismatches, 4 duplicate keys, 6 references to
+non-existent keys, 9 blank-state placeholders, 20 missing translations. Highlights:
 
 **iOS** — broken and test content in the shipped `zh-Hans` file:
 
@@ -370,6 +508,7 @@ concrete defects fall out of it:
 | --- | --- |
 | `feature/status/.../strings.xml:3` | `<string name="status_preview_title">测试</string>` |
 | 4 files | Placeholder text shipped as content: `文件1`, `副标题`, `公告内容` |
+| `feature/coursescore/.../strings.xml:41,42` | `文件`, `课程评分` — nonsensical and dead tab labels |
 
 ### 7.5 Missing translations
 
