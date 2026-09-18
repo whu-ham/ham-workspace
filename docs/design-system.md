@@ -4,6 +4,10 @@ How to build the Ham native apps. This is a specification, not a comparison — 
 "build it this way". Values are measured from the existing code; where the two clients
 disagreed, **iOS is the baseline**.
 
+This document covers how things look. **[`copy-and-strings.md`](copy-and-strings.md)** covers
+what they say — terminology, copy rules, and string key naming. They are companion documents;
+a UI change usually needs both.
+
 Current divergences between the shipped clients are recorded in
 [§8 Current divergences](#8-current-divergences) at the end, so this document stays readable
 as a spec.
@@ -979,6 +983,8 @@ What the two shipped clients do differently today. Each entry is a task, not a s
 - [ ] Interactive elements (links, buttons, selected state, toggles) use `accent`, not the
       module brand colour — unless the element is one of the three brand places in
       [§2.2](#22-colour).
+- [ ] User-visible text follows [`copy-and-strings.md`](copy-and-strings.md) — approved
+      terminology, no hardcoded strings, keys in the shared namespace.
 - [ ] Every colour has a light and a dark value and is an adaptive resource.
 - [ ] Text styles are explicit — no relying on an inherited default size.
 - [ ] Interactive elements meet the 44 minimum tap target.
