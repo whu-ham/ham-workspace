@@ -23,10 +23,16 @@ as a spec.
 - [1. Overview](#1-overview)
 - [2. Foundations](#2-foundations)
 - [3. Components](#3-components)
-- [4. Screens](#4-screens) — [status](#status-dashboard) · [course](#course-timetable) ·
-  [schedule](#schedule) · [library](#library) · [sport](#sport) · [score](#score) ·
-  [course score](#course-score) · [my &amp; user center](#my-and-user-center) ·
-  [shared](#shared-screens)
+- [4. Screens](#4-screens) — the catalogue itself is in
+  [`screens.md`](screens.md): [status](screens.md#1-status-dashboard-状态-status) ·
+  [course](screens.md#2-course-timetable-课程表-course) ·
+  [schedule](screens.md#3-schedule-日程-schedule) ·
+  [library](screens.md#4-library-图书馆-library) · [sport](screens.md#5-sport-运动-sport) ·
+  [score](screens.md#6-score-成绩-score) ·
+  [course score](screens.md#7-coursescore-课程评分-coursescore) ·
+  [my](screens.md#8-my-tab-我的-my) · [user center](screens.md#9-user-center-用户中心) ·
+  [auth](screens.md#10-auth-and-sign-in-登录与授权) ·
+  [shared](screens.md#11-shared-components-共享组件)
 - [5. Shared flows](#5-shared-flows)
 - [6. Platform rules](#6-platform-rules)
 - [7. Undecided](#7-undecided)
@@ -559,7 +565,7 @@ Recorded in `screens.md` per screen. The ones that matter most:
 ## 5. Shared flows
 
 Four sequences recur across modules. They describe **order and state transitions**; the visual
-spec for each screen involved lives in [§4.9 Shared screens](#shared-screens).
+spec for each screen involved lives in [`screens.md`](screens.md).
 
 ### 5.1 CAS verification gate
 
@@ -575,25 +581,25 @@ identical everywhere:
 5. Dismissing without logging in pops back to where the user came from.
 
 **Colours:** the intro uses the module's brand colour. Failure states use `feedback.error`.
-**Screen spec:** [Intro / connect screen](#intro--connect-screen-连接页).
+**Screen spec:** [Intro / connect screen](screens.md#intro--connect-screen-连接页).
 
 ### 5.2 Captcha
 
 The education and sport flows route a CAPTCHA through a bundled local HTML page
 (`education-captcha-page.html`, `sport-captcha-page.html`) and receive the token back through a
-platform bridge. Include a 刷新 action. **Screen spec:** [Webview screens](#webview-screens).
+platform bridge. Include a 刷新 action. **Screen spec:** [Webview screens](screens.md#webview-screens).
 
 ### 5.3 Sign-in
 
 A shared login screen offers the available providers. Brand-coloured social buttons use their
 own colours, not the app palette. **Screen spec:** see the login screen under
-[§4.8 My and user center](#my-and-user-center).
+[§10 Auth and sign-in](screens.md#10-auth-and-sign-in-登录与授权).
 
 ### 5.4 Web content
 
 Remote-config banners and announcements render three ways: an in-app webview push, an external
 browser, or a full-text view rendered from a string. Pick by the config entry's action type.
-**Screen spec:** [Webview screens](#webview-screens).
+**Screen spec:** [Webview screens](screens.md#webview-screens).
 
 ---
 
