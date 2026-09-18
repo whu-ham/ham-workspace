@@ -4,15 +4,19 @@ How to build the Ham native apps. This is a specification, not a comparison — 
 "build it this way". Values are measured from the existing code; where the two clients
 disagreed, **iOS is the baseline**.
 
-Three documents, used together:
+Five documents, used together. The first three are the specification; the last two are the
+work lists derived from it.
 
 | Document | Covers |
 | --- | --- |
 | **[`design-system.md`](design-system.md)** (this one) | Tokens and components — how things look |
 | **[`screens.md`](screens.md)** | Every screen, both platforms — 129 screens with per-element values |
 | **[`copy-and-strings.md`](copy-and-strings.md)** | Terminology, copy rules, string key naming — what things say |
+| **[`ui-parity.md`](ui-parity.md)** | Per-page UI work list — what each platform must change to match |
+| **[`logic-parity.md`](logic-parity.md)** | Per-rule logic work list — business code, not appearance |
 
-A UI change usually needs all three.
+A UI change usually needs the first three. Before changing behaviour on one platform, check
+`logic-parity.md` to see whether the other already does it your way.
 
 Current divergences between the shipped clients are recorded in
 [§8 Current divergences](#8-current-divergences) at the end, so this document stays readable

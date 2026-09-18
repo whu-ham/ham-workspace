@@ -1,9 +1,23 @@
-# iOS / Android UI parity
+# iOS / Android parity
 
 **Normative source: `docs/design-system.md`.** That document is the specification — type scale,
 spacing, radius, colour, and the per-component numbers. This document is the *migration plan*:
 what to change, in what order, and what it costs. Values are not duplicated between the two; if
 they disagree, `docs/design-system.md` wins.
+
+## The five documents
+
+| Document | Role |
+| --- | --- |
+| `docs/design-system.md` | Specification — tokens and components |
+| `docs/screens.md` | Specification — 129 screens, per-element values |
+| `docs/copy-and-strings.md` | Specification — terminology, copy rules, key naming |
+| `docs/ui-parity.md` | Work list — per-page UI divergence, page by page |
+| `docs/logic-parity.md` | Work list — per-rule logic divergence, business code |
+
+`ui-parity.md` and `logic-parity.md` are generated from the specification plus a cross-platform
+audit. They are where you pick up work; the first three are where you check what "correct"
+means. When a work-list row is closed, update the specification if the agreed value changed.
 
 ## Goal
 
@@ -23,6 +37,8 @@ below are expressed in that shared unit.
 
 - Submodules: `repos/ham-ios`, `repos/ham-android`.
 - No protobuf, backend, RN or cloud-config change.
+- Logic divergence is tracked in `docs/logic-parity.md` and is a separate work stream from the
+  visual work below. Some entries there need backend or product input before they can close.
 - Feature gaps found during the survey (print UI, sport status card, RN bundle drift) are
   **out of scope** and listed at the bottom under *Related work* so they are not lost.
 
