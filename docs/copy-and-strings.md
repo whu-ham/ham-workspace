@@ -36,6 +36,10 @@ Three things this document governs:
 For each concept there is **one approved word**. The forbidden column lists variants that exist
 in the codebase today and must not be used in new copy.
 
+**iOS is the baseline.** Where the two platforms word the same thing differently and this table
+does not say otherwise, the iOS wording wins. The table overrides that default where the iOS
+word is the weaker one — for example row 26, where all four sport-venue words are iOS's.
+
 | # | Concept | ✅ Use | ❌ Not | Notes |
 | --- | --- | --- | --- | --- |
 | 1 | Book / reserve | **预约** | 预定, 预订, 订 | Applies to library **and** sport. |

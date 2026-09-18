@@ -254,6 +254,10 @@ Three rules:
 
 ### 2.3 Type
 
+**iOS is the baseline for type.** The scale below is SwiftUI's, and Android moves to it —
+including `body` at 17 rather than Material's 16. See
+[§7](#7-undecided) for what that costs.
+
 | Token | Size | Weight | Line height | Used for |
 | --- | --- | --- | --- | --- |
 | `largeTitle` | 34 | Bold | 40 | Large page title on 状态 |
@@ -332,20 +336,63 @@ fill delta plus the 16 radius — no shadow, no border, no elevation parameter.
 
 ### 2.8 Iconography
 
+**The two platforms use different icon sets** — SF Symbols on iOS, Material Icons on Android.
+They are different drawings with different optical metrics, so **the same nominal size does not
+look the same size**. An absolute icon size is therefore *not* cross-platform normative.
+
+What **is** normative is the **pairing**: an icon that sits with text takes the size bound to
+that text role. Within one app, the same text role always gets the same icon size. That is what
+makes the app look systematic.
+
+#### Text-paired icons
+
+| Text role | Text size | Icon — iOS | Icon — Android | Used for |
+| --- | --- | --- | --- | --- |
+| `caption2` / `caption` | 11–12 | **12** | **16** | Inline chevrons, chip glyphs, icons beside meta text |
+| `body` / `bodyBold` / `headline` | 17 | **20** | **20** | List-row leading glyph, icons beside body copy |
+| `title3` / `title2` | 20–22 | **24** | **24** | Section icons, icons beside section headings |
+| `title` | 28 | **32** | **32** | Icons beside hero values |
+
+The one place the platforms differ is the smallest step: an SF Symbol fills less of its box than
+a Material icon at the same size, so iOS uses **12** where Android uses **16** for caption-paired
+icons. Everything from `body` up is the same number on both.
+
+#### Standalone and decorative icons
+
+These are not paired with text, so the absolute value *is* normative on both platforms:
+
 | Token | Value | Used for |
 | --- | --- | --- |
-| `icon.xs` | 12 | Inline with caption text, chevrons |
-| `icon.sm` | 20 | List-row leading glyph |
-| `icon.md` | 24 | Status-card header, icon buttons |
-| `icon.lg` | 32 | Small-card trailing decoration, area badges |
-| `icon.xl` | 64 | Large tiles, empty states |
-| `icon.hero` | 72 | Banner foreground |
+| `icon.plate` | 40 | The circle behind a list-row leading glyph |
+| `icon.badge` | 32 | Area badges, small-card trailing decoration |
+| `icon.tile` | 64 | Large tile icon |
+| `icon.empty` | 64 | Empty-state icon |
+| `icon.banner` | 72 | Banner foreground icon |
 | `icon.watermark` | 128 | Card background watermark |
 
-Every icon must be explicitly sized. Watermarks render at a **fixed frame size** (not a font
-size) at alpha **0.12**, anchored **bottom-trailing** at offset **(16, 16)**, clipped to the
-card — iOS renders an SF Symbol's ink smaller than its box, Android fills the box, so a font
-size and a frame size are not interchangeable.
+#### Rules
+
+1. **Every icon is explicitly sized.** Never inherit a default.
+2. **An icon paired with text uses the pairing table**, not a hand-picked number.
+3. **Chevrons are caption-paired** — 12 on iOS, 16 on Android. Not 8, not the Material default.
+4. **Watermarks render at a fixed frame size**, not a font size. iOS renders an SF Symbol's ink
+   smaller than its box while Android fills the box, so a font size and a frame size are not
+   interchangeable. Watermarks sit at alpha **0.12**, anchored **bottom-trailing** at offset
+   **(16, 16)**, clipped to the card.
+
+#### Current violations
+
+| Platform | Violation | Should be |
+| --- | --- | --- |
+| iOS | Chevrons hardcoded at `.font(.system(size: 8))` in 22 places | 12 |
+| iOS | Status-card header icon has no size at all | 24 |
+| Android | List-row glyphs at 25 and 30 in different files | 20 |
+| Android | Area badge 36 where iOS uses 32 | 32 |
+| Both | Watermark sizes from 60 to 250 with no rule | 128 |
+
+---
+
+## 3. Components
 
 ---
 
@@ -613,6 +660,8 @@ These **must** differ and are not defects:
 | Back navigation | edge swipe | system back |
 | Navigation chrome | `UINavigationController` | in-Compose header |
 | Native controls | SwiftUI `Toggle` / `Slider` / `ProgressView` | Material3 |
+| Icon set | SF Symbols | Material Icons |
+| Icon size | **Follow the pairing in [§2.8](#28-iconography).** Sizes may differ between platforms because the drawings differ; within one app the same text role always gets the same icon size. | |
 | System pickers | platform-supplied | platform-supplied |
 | Widget configuration | none — WidgetKit owns refresh | in-app update-interval picker |
 | Language | follows system locale | in-app locale picker |
@@ -626,12 +675,17 @@ implementation.
 
 ## 7. Undecided
 
-Needs a maintainer call before implementation:
+### Resolved
 
-1. **Body 17 vs 16.** iOS-as-baseline says 17; Android's 16sp is tokenised across 240 call
-   sites, and 10 of iOS's own raw size declarations are already at 16.
-2. **Chevron size.** Spec says `icon.xs` (12). iOS currently writes 8 in 22 places, Android
-   uses the Material default 24.
+1. ~~Body 17 vs 16.~~ **Resolved: 17.** Text follows iOS, so the iOS type scale in
+   [§2.3](#23-type) is normative, including `body` at 17.
+2. ~~Chevron size.~~ **Resolved: caption-paired — 12 on iOS, 16 on Android.** Not a single
+   cross-platform number: SF Symbols and Material Icons are different drawings, so an absolute
+   icon size is not cross-platform normative. The *pairing* is — see
+   [§2.8](#28-iconography).
+
+### Still open
+
 3. **Stage the type change?** Raising Android `headline` 14 → 17 is the largest reflow in the
    migration. Land non-type fixes first, or one pass with full visual review?
 4. **Toast radius.** Spec says 8; the shipped iOS value is 0 (a plain rectangle, presumably an
