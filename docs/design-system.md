@@ -117,10 +117,46 @@ Bottom spacing is computed from the live system inset, never hardcoded.
 Every colour has a light and a dark value and is an adaptive resource. Never hardcode a hex in
 view code.
 
+#### Accent vs brand — read this first
+
+There are two separate colour systems, and which one to use depends on **what the element
+does**, not on which module it lives in.
+
+| | `accent` | `brand.<module>` |
+| --- | --- | --- |
+| Value | `#007AFF` / `#0A84FF` | one per module |
+| Means | **interactive** — this responds to a tap | **identity** — this belongs to a module |
+| Used for | Links, buttons, selected state, today highlight, chevrons, switches, enabled state, date pickers, "前往本周" | Status-card header band, function-grid tile, module intro screen, module watermark |
+| Varies by module? | **No** — the same blue everywhere | Yes |
+
+**Interactive elements use `accent` on every module.** A button inside the library is blue, not
+library-blue. A selected chip on the course screen is blue, not course-green. The module colour
+identifies the module; it does not tint its controls.
+
+**`brand.<module>` is used at exactly three places per module:**
+
+1. the status-card header band on 状态,
+2. the function-grid tile on 我的,
+3. the module's intro / connect screen.
+
+Plus, optionally, the module's card watermark. That is the whole list — verified across both
+platforms, where each brand token has between 2 and 35 use sites, nearly all in those places.
+
+#### Accent
+
+| Token | Light | Dark |
+| --- | --- | --- |
+| `accent` | #007AFF | #0A84FF |
+| `accent.subtle` | #007AFF @ 0.15 | #0A84FF @ 0.15 |
+| `accent.muted` | #007AFF @ 0.10 | #0A84FF @ 0.10 |
+
+On iOS this is the system blue — `AccentColor.colorset` is deliberately **empty**, so the app
+inherits `UIColor.systemBlue` and adapts to dark mode for free. On Android it is
+`R.color.ham_blue`.
+
 #### Brand
 
-Each module owns one brand colour, used for its status-card header, its function-grid tile, its
-tinted fills, and its icons.
+Each module owns one brand colour for identity.
 
 | Token | Light | Dark | Module |
 | --- | --- | --- | --- |
@@ -132,6 +168,12 @@ tinted fills, and its icons.
 | `brand.coursescore` | #283593 | #283593 | 课程评分 |
 | `brand.bus` | #A2845E | #AC8E68 | 校车 |
 | `brand.pay` | #BF360C | #BF360C | 付费 |
+
+**Collision worth knowing:** `brand.library` (#007AFF) is the **same value as `accent`**. On
+library screens the module identity colour and the interactive colour are indistinguishable, so
+you cannot tell from a screenshot whether a blue element there is identity or interaction. This
+is the current state on both platforms and is not a bug — just be aware that the library module
+has no distinct identity colour of its own.
 
 #### Surface
 
@@ -149,12 +191,16 @@ tinted fills, and its icons.
 | `text.primary` | #000000 | #FFFFFF | Titles, values, body |
 | `text.secondary` | #8E8E93 | #98989D | Subtitles, captions, meta |
 | `text.tertiary` | #8E8E93 @ 60% | #98989D @ 60% | Placeholder, disabled |
-| `text.link` | #007AFF | #0A84FF | Inline links |
+| `text.link` | = `accent` | = `accent` | Inline links — same value as `accent` |
 | `text.danger` | #FF3B30 | #FF453A | Destructive text |
 
 Define these as **semantic roles, not hex values**. iOS's `Color.primary` and `Color.gray` are
 dynamic; writing #000000 into a spec would break iOS dark mode. The hexes above are the
 *Android* implementation of each role.
+
+`text.link` and `accent` are the same colour. The separate name exists so a reader can tell
+"this text is a link" from "this control is interactive" at a glance — but they resolve to one
+value and must stay in sync.
 
 #### Feedback
 
@@ -167,17 +213,25 @@ dynamic; writing #000000 into a spec would break iOS dark mode. The hexes above 
 
 #### Tint recipes
 
-Brand colour is never used at full strength behind content.
+Tints are built from **`accent` by default**, and from `brand.<module>` only where the element is
+deliberately carrying module identity.
 
 | Recipe | Formula | Used for |
 | --- | --- | --- |
-| `tint.subtle` | `surface.secondary` + brand @ 0.15 | Status-card headers, large tiles, function buttons |
-| `tint.chip` | brand @ 0.10 background, brand text | Filter chips, small pills |
-| `tint.active` | brand @ 1.0, white text | Filled primary buttons |
+| `tint.subtle` | `surface.secondary` + **accent** @ 0.15 | Buttons, large tiles, selected states |
+| `tint.chip` | **accent** @ 0.10 background, **accent** text | Filter chips, small pills |
+| `tint.active` | **accent** @ 1.0, white text | Filled primary buttons |
 | `tint.muted` | `text.secondary` @ 0.10, `text.secondary` text | Unselected chips, inactive states |
+| `tint.brand` | `surface.secondary` + **brand** @ 0.15 | Status-card header band, function-grid tile |
 
-Two rules: always put a tint over an **opaque base**, and always use the **brand colour for
-tinted button text** (not the label colour).
+Three rules:
+
+1. **Always put a tint over an opaque base.** A tint alone renders translucent against whatever
+   is behind it.
+2. **Tinted text is the same colour as its tint** — accent text on an accent tint, brand text on
+   a brand tint. Not the label colour.
+3. **Reach for `accent` unless you are colouring one of the three brand places.** When in doubt,
+   it is accent.
 
 ### 2.3 Type
 
@@ -360,7 +414,7 @@ A tappable row inside a card, or standalone.
 | Variant | Height | Padding | Radius | Background | Text |
 | --- | --- | --- | --- | --- | --- |
 | Filled primary | 48 | h16 | 8 | `tint.active` | 17 / Bold / white |
-| Tinted | 48 | h16 v12 | 12 | `tint.subtle` | 17 / Bold / brand |
+| Tinted | 48 | h16 v12 | 12 | `tint.subtle` | 17 / Bold / `accent` |
 | Borderless | = text | 0 | — | none | 17 / Regular / `text.link` |
 | Destructive text | = text | 0 | — | none | 17 / Regular / `text.danger` |
 | Destructive pill | 28 | h12 v6 | 8 | transparent, 1px `text.danger` @ 0.3 | 12 / Regular / `text.danger` |
@@ -394,11 +448,11 @@ Status badge (the coloured bar or dot beside a value): 6 × 6, radius 3, in the 
 | Switch | Native on each platform. Android: checked track = `brand.sport`, unchecked track = `surface.tertiary`. |
 | Slider | Native on each platform, no custom colours. |
 | Progress bar | Height 4, radius 2, track `surface.tertiary`, fill in context colour. |
-| Text field | Radius 8, background `surface.secondary`, 1px `surface.tertiary` border, padding 8, body text, placeholder `text.tertiary`, caret `text.link`. |
+| Text field | Radius 8, background `surface.secondary`, 1px `surface.tertiary` border, padding 8, body text, placeholder `text.tertiary`, caret `accent`. |
 | Segmented control | Track radius 6, track `text.secondary` @ 0.40, track padding 2, thumb radius 6, thumb `surface.tertiary`. Thumb radius must equal track radius (they differ today). |
 | Picker button | Radius 8, padding v8 / h12, background `surface.tertiary`, 17 / Regular. |
 | Swipe to confirm | Height 48, radius 12, track `surface.tertiary`, fill `text.danger`, 3px handle. |
-| Checkbox | `icon.md` (24), radius 4, `text.link` when checked. |
+| Checkbox | `icon.md` (24), radius 4, `accent` when checked. |
 
 ### 3.7 Sheet
 
@@ -443,7 +497,7 @@ draggable.
 
 **Purpose:** one scrolling column of live module cards, ranked by relevance.
 **Entry:** default tab.
-**Brand colour:** none of its own — each card carries its module's colour.
+**Module colour:** none of its own — each card carries its module's brand colour.
 
 **Layout:**
 
@@ -499,16 +553,19 @@ white text, pinned first.
 
 **Purpose:** a week-by-week grid of class periods.
 **Entry:** tab 1, or the function-grid tile.
-**Brand colour:** `#1B5E20` — but note the grid itself does **not** use it. The screen's accent
-is `text.link` blue; course green appears only on the 状态 course card and the function-grid
-tile.
+**Module colour:** `#1B5E20` — identity only. All controls here use `accent`.
+
+The screen follows the standard rule: **every interactive element here is `accent` blue** —
+前往本周, the week picker, the today highlight, selected chips, 添加, 编辑. Course green appears
+only in the three identity places: the 状态 course card, the function-grid tile, and the
+获取课程 intro. This is correct and intentional, not an oversight.
 
 **Layout — fixed grid, not scrolling cards. The week changes in place.**
 
 ```
 ┌────┬──────────────────────────────────────┐
 │    │  一     二     三     四     五      │  ← weekday header, 36 tall
-│    │ 9-15   9-16  9-17   9-18  9-19      │     today = surface.tint fill + text.link
+│    │ 9-15   9-16  9-17   9-18  9-19      │     today = surface.tint fill + accent
 ├────┼──────────────────────────────────────┤
 │  1 │ ┌────┐ ┌────┐                       │
 │  2 │ │高清│ │线代│                       │  ← grid cells
@@ -575,7 +632,7 @@ title + 请设置开学日期后再使用课程表. The top bar still renders.
 
 **Purpose:** a to-do list of schedules with countdowns, filterable by group.
 **Entry:** the function-grid tile, or the 状态 schedule card.
-**Brand colour:** `#01579B`.
+**Module colour:** `#01579B` — identity only. All controls here use `accent`.
 
 **Layout:** hero card on top, pinned group tab bar, scrolling list below.
 
@@ -616,7 +673,7 @@ Actions: edit and delete.
 
 **Purpose:** seat and room booking.
 **Entry:** the function-grid tile, or the 状态 library card, or the `ham://library` deep link.
-**Brand colour:** `#007AFF`.
+**Module colour:** `#007AFF` — identity only. All controls here use `accent`.
 
 **Home layout — scrolling column, in this order:**
 
@@ -661,7 +718,7 @@ toast, plus the red retry-login card on token expiry.
 
 **Purpose:** sports venue booking.
 **Entry:** the function-grid tile, or the 状态 sport card.
-**Brand colour:** `#34C759`.
+**Module colour:** `#34C759` — identity only. All controls here use `accent`.
 
 **Home layout — scrolling column, in this order:**
 
@@ -699,7 +756,7 @@ toast, plus the red retry-login card on token expiry.
 
 **Purpose:** grades, GPA, and F2 calculation.
 **Entry:** the function-grid tile. There is no score card on 状态.
-**Brand colour:** `#FF9500`.
+**Module colour:** `#FF9500` — identity only. All controls here use `accent`.
 
 **Home layout — scrolling column, in this order:**
 
@@ -728,7 +785,7 @@ detail, Face ID error.
 
 **Purpose:** course reviews and grade distributions.
 **Entry:** the function-grid tile, or the comment button on a score row.
-**Brand colour:** `#283593`.
+**Module colour:** `#283593` — identity only. All controls here use `accent`.
 
 | Screen | Purpose |
 | --- | --- |
@@ -749,7 +806,7 @@ card if any, and the comment thread.
 
 **Purpose:** account hub and navigation.
 **Entry:** tab 3.
-**Brand colour:** none — the page is neutral; each function tile carries its own module colour.
+**Module colour:** none — the page is neutral; each function tile carries its own brand colour.
 
 **Layout — scrolling column:**
 
@@ -919,6 +976,9 @@ What the two shipped clients do differently today. Each entry is a task, not a s
 ## 9. Review checklist
 
 - [ ] Padding, radius, font, and colour all come from a token here.
+- [ ] Interactive elements (links, buttons, selected state, toggles) use `accent`, not the
+      module brand colour — unless the element is one of the three brand places in
+      [§2.2](#22-colour).
 - [ ] Every colour has a light and a dark value and is an adaptive resource.
 - [ ] Text styles are explicit — no relying on an inherited default size.
 - [ ] Interactive elements meet the 44 minimum tap target.
