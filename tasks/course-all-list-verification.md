@@ -28,7 +28,20 @@ both. iOS draws `list.bullet`, Android draws `TableRows` — the same list mark 
 
 ![Timetable, full screen](assets/parity-2-timetable-full.png)
 
-### 2. The all-courses page
+#### Measured geometry (not eyeballed)
+
+| | iOS | Android |
+| --- | --- | --- |
+| Leading button frame | x = 10 pt, y = 56 pt, 48 x 46 pt on a 402 x 874 pt screen → x = 2.5% of the width, y = 6.4% of the height | list icon ink measured at x = 3.7-8.0% of the width, y = 4.8-6.5% of the height |
+| Accessibility | identifier `course_header_all_course_list`, label "List" | test tag `course_week_all_course`, content description `course_all_course_title` |
+| What sits to its right | the previous-week chevron | the previous-week chevron, measured at x = 12.8-14.3% of the width, i.e. immediately right of the button |
+
+The iOS numbers come from an XCUI query run on the simulator against the running app
+(`app.descendants(matching: .any).matching(identifier: "course_header_all_course_list").firstMatch`
+→ `exists=true frame=(10.0, 56.0, 48.0, 46.0) label=List`), so the button in the capture above is
+that element and not some other header icon. The Android numbers come from the capture's pixels.
+
+## 2. The all-courses page
 
 ![All-courses list, iOS vs Android](assets/parity-3-all-course-list.png)
 
