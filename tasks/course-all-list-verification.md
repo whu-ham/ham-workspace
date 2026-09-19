@@ -17,6 +17,58 @@ left of the previous-week control:
 
 So the two screenshots below are the same control in the same place, not two different features.
 
+## Tapping the button opens the list — before → after, both platforms
+
+Each pair is one E2E case: it captures the timetable, taps the button, asserts the page that opens,
+and captures that page.
+
+**iOS** (`testTheTimetableHeaderOpensTheAllCourseList` — `given(.coursesTab)` → capture →
+`when(.tapIdentifier("course_header_all_course_list"))` → `then(.shows(Label.courseAllList))` →
+capture):
+
+![iOS before and after the tap](assets/click-1-ios-before-after.png)
+
+**Android** (`theLeadingButtonOpensTheAllCourseList` — capture →
+`onNode(hasTestTag("course_week_all_course")).performClick()` →
+`waitForText(course_all_course_title)` → capture):
+
+![Android before and after the tap](assets/click-2-android-before-after.png)
+
+The button itself, at readable size:
+
+![The leading button on both](assets/parity-1-header.png)
+
+## Layout comparison, dimension by dimension
+
+| Dimension | iOS | Android | Verdict |
+| --- | --- | --- | --- |
+| Button placement | leading slot of `CourseViewHeaderView`, left of the previous-week chevron | leading slot of `CourseMainViewWeekChoiceView`, left of the previous-week button | same position |
+| Button size / hit area | 48 x 46 pt (measured frame `x=10, y=56, 48x46`) | 48 dp `HamButton` with a 24 dp icon | same hit target |
+| Button mark | `list.bullet` | `Icons.Rounded.TableRows` | same list mark in each icon set |
+| Page title | inline navigation title, `COURSE_ALL_LIST_TITLE` | `HamNavigationLazyScrollView(title = course_all_course_title)` | same |
+| List shell | `List`, plain style, rows separated by 6 pt insets | `HamNavigationLazyScrollView`, 8 dp spacing, 16 dp horizontal padding | same rhythm (6-8 units) |
+| Card | radius 12, padding 12, 7 cells | radius 12 dp, padding 12 dp | identical |
+| Card side margin | 16 pt (measured 48 px = 3.98% of screen width) | 16 dp (~3.9% of layout width) | identical |
+| Week cells | 7 equal cells (`maxWidth: .infinity`), 4 gap, 26 min height, radius 6 | 7 equal cells (`weight(1f)`), 4 dp gap, 26 dp min height, radius 6 | identical |
+| Cell caption | 9 pt weekday label above the strip | 9 sp weekday label above the strip | identical |
+| Name | 16 semibold | 16.sp SemiBold | identical |
+| Teacher / room | 13 regular | 13.sp regular | identical |
+| Cell text | 10 medium | 10.sp Medium | identical |
+| Footer (week range, credit) | 11 regular | 11.sp regular | identical |
+| Section header | 13 semibold, secondary | 13.sp SemiBold, `ham_text_secondary` | identical |
+| Status badge | capsule, 11 medium, 14% fill — green / blue / secondary | capsule 50%, 11.sp, 14% fill — `ham_green` / `ham_blue` / `ham_text_secondary` | identical |
+| Already-taken rows | `opacity(0.6)` | `alpha(0.6f)` | identical |
+| Row order in a section | earliest weekday → earliest period → name | same comparator | identical |
+| Section order | in progress → not started → already taken | in progress → not started → already taken | identical |
+
+**The two layouts are consistent.** Every dimension above is carried by the same constant on both
+sides — 12/12 card radius and padding, 7 equal cells with a 4 gap, 26 tall, radius 6, 16/13/10/11/9
+type scale, 0.6 dimming — and the two captures in this file show the same structure: a title, a
+section band, one card per course, and inside each card the name and badge line, the teacher/room
+line, the seven-cell strip, and the week-range/credit line. The only differences are the platform's
+own chrome (iOS navigation bar vs Android top app bar, and each icon set's own list mark), which is
+what "platform-adaptive" means here.
+
 ## Layout parity (side-by-side, iOS left / Android right)
 
 ### 1. Timetable header — the leading all-courses button
