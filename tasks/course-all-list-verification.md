@@ -56,18 +56,34 @@ Row content and order are identical: name + status badge on the first line, teac
 second, the seven weekday cells on the third (filled with the course colour where the course meets),
 and week range + credit on the fourth.
 
-### 4. The already-taken section (reached by scrolling / swiping up)
+### 4. Swiping up reveals the courses already taken — proven on both platforms
 
-![Already-taken section, Android](assets/all-course-list-android-completed.png)
+**iOS, before and after the swipe.** The case captures the page, asserts the already-taken course is
+*absent* before the gesture (`then(.showsNone([Seed.courseAlreadyTaken]))`) and *present* after it,
+then captures the page again.
 
-On Android the seeded data covers all three states, and this capture is taken after swiping up:
-进行中 is followed by 未开始 and then 已上过 last (`E2E Done Course`, weeks 1-3 of a term in week 4),
-which is the behaviour the requirement asks for.
+![iOS before and after the swipe](assets/parity-5-ios-swipe-before-after.png)
 
-The iOS E2E seed pins every seeded course to the current week, so iOS shows the in-progress section
-only — the section *order* on iOS is pinned by `CourseAllListViewModel.buildSections` (the same
-0/1/2 ordering as Android) rather than by a capture. This is the one parity item that is proven by
-code and by the Android capture, not by an iOS capture.
+**The same gesture on both platforms.** Left: iOS after swiping up. Right: Android after swiping up.
+
+![iOS and Android after the swipe](assets/parity-6-swipe-completed-ios-android.png)
+
+**The already-taken section at readable size.**
+
+![Already-taken section detail](assets/parity-7-completed-section-detail.png)
+
+How the iOS side is made possible: the shared E2E seed pins the term to the current Monday, which is
+week 1, where no course can be in the past. The suite now opts into `-e2e_courseTermWeeks 3`, which
+starts the seeded term three weeks ago and adds two seeded courses — one that ended before the week
+the app opens on (`E2E Done Course`), one that starts after it (`E2E Later Course`). Both sit on week
+ranges the opening week does not cover, so the grid every other suite reads is unchanged, and only
+this suite asks for them.
+
+| | iOS | Android |
+| --- | --- | --- |
+| Before the swipe | `E2E Done Course` not on screen (asserted) | `E2E Done Course` below the fold (asserted) |
+| Gesture | `when(.scrollUp)` — a drag from 75% to 35% of the window, repeated until the row appears | `performTouchInput { swipeUp() }`, repeated until the section appears |
+| After the swipe | `Completed` / 已上过 section with `E2E Done Course` | `Completed` / 已上过 section with `E2E Done Course` |
 
 ## Source captures
 
@@ -78,6 +94,8 @@ code and by the Android capture, not by an iOS capture.
 | `assets/all-course-list-ios.png` | iOS all-courses page (1206x2622) |
 | `assets/all-course-list-android-top.png` | Android all-courses page, top (1080x2400) |
 | `assets/all-course-list-android-completed.png` | Android all-courses page after swiping up (1080x2400) |
+| `assets/all-course-list-ios-before-swipe.png` | iOS all-courses page before the swipe (1206x2622) |
+| `assets/all-course-list-ios-after-swipe.png` | iOS all-courses page after the swipe (1206x2622) |
 
 ## Verification actually run
 
@@ -88,7 +106,7 @@ code and by the Android capture, not by an iOS capture.
 | Android JVM unit tests | `./gradlew :feature:course:testDebugUnitTest` | BUILD SUCCESSFUL — 7 new cases + existing pass |
 | Android E2E on emulator (Medium_Phone AVD, API 37) | `adb shell am instrument -w -e class com.nowcent.ham.e2e.suite.course.CourseAllCourseListE2eTest com.nowcent.ham.test/com.nowcent.ham.HiltTestRunner` | `OK (3 tests)`; `connectedGithubDebugAndroidTest`: 3 run / 0 failed |
 | iOS app build | `xcodebuild -workspace Ham/Ham.xcworkspace -scheme "Ham (iOS)" -configuration Debug -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build` | ** BUILD SUCCEEDED ** |
-| iOS E2E on simulator (iPhone 17 Pro) | `xcodebuild -workspace Ham/Ham.xcworkspace -scheme "Tests iOS" -configuration Debug -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -only-testing:Tests\ iOS/HamE2ECourseAllListTests test` | ** TEST SUCCEEDED ** — 3 run / 3 passed / 0 failed (61.5s) |
+| iOS E2E on simulator (iPhone 17 Pro) | `xcodebuild -workspace Ham/Ham.xcworkspace -scheme "Tests iOS" -configuration Debug -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -only-testing:Tests\ iOS/HamE2ECourseAllListTests test` | ** TEST SUCCEEDED ** — 3 run / 3 passed / 0 failed (66.2s), including `testSwipingUpRevealsTheCoursesAlreadyTaken` |
 
 Both clients were started from `ham-workspace` pinned at `origin/main` (2c070fec) with every
 submodule at its latest `origin/main`: ham-android 1b68e365, ham-ios 42e32927, ham-backend-go
