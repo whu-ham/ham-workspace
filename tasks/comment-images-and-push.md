@@ -182,6 +182,35 @@ Survivors, all fixed:
 | ios | A `#Preview` outside its `#if DEBUG` region breaks the Release build |
 | both | One e2e case and two Android unit assertions did not pin what they claimed |
 
+### Round 3 — a second pass over the fixed code
+
+Round 2 confirmed the survivors above and fixed them. A third pass ran over the
+result, because the fix commits themselves were unreviewed and neither client
+can be compiled locally. It found two compile breakers and one DoS guard that
+did not hold:
+
+| Repo | Finding |
+| --- | --- |
+| android | `import androidx.compose.foundation.layout.matchParentSize` — `matchParentSize` is a member extension of `BoxScope`, not a top-level declaration, so the import cannot resolve and `:feature:coursescore` fails to compile. Deleted; the other 10 call sites resolve it off the receiver |
+| ios | `Google_Protobuf_Timestamp` used in a file-scope `#Preview` without `import SwiftProtobuf` — nothing re-exports it, so Debug and Release both fail. Import added |
+| backend | The decode budget counted pixels, not bytes. A 16-bit RGBA PNG allocates 8 bytes/pixel, so a 0.37 MB upload passed both guards and allocated ~382 MB. Now bounded in bytes |
+| backend | The like push and a DB read ran inside the redis lock, stalling the same user's opposite action |
+| backend | Three newly added comments were Chinese, which the repo's language policy forbids |
+| backend | `isOwnOSSImageURL` accepted `..` path segments, so the prefix scope was escapable |
+| android | An oversized image was reported to the user as "rejected by moderation" |
+| android | The course-centre comment card dropped images and the edited marker that iOS renders |
+| android | `UpdateCourseCommentResponse.success` was discarded |
+| ios | Full-resolution JPEG transcode ran on the main actor |
+| ios | A second pick during an in-flight upload could exceed nine images |
+| ios | Only `GRPCStatus` was caught around upload, so a non-GRPC failure dropped the rest silently |
+| ios | Edit mode gated on a guessed 20-character minimum when the config was never loaded |
+| ios | Three additional hard compile errors at HEAD: non-exhaustive `catch` in `async` funcs (`submitRate`, `submitComment`, `updateComment`), verified with `xcrun swiftc` |
+
+Round 3 also refuted three claims: the `course` deep link really does reach the
+Course tab (`MainBodyViewModel` switches the tab); the TPNS tap callback the
+branch implements is the current non-deprecated selector; `pendingURL` was not
+deleted by this branch — it landed on `main` after the branch point.
+
 ### Verification status
 
 All three consumers pin `v1.0.12-beta.1`, cut from the contract branch. The
