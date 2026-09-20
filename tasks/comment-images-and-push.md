@@ -170,11 +170,17 @@ Survivors, all fixed:
 | ios | A `#Preview` outside its `#if DEBUG` region breaks the Release build |
 | both | One e2e case and two Android unit assertions did not pin what they claimed |
 
-### Known limitation
+### Verification status
 
-`PROTO_VERSION` is still `v1.0.10` in all three consumers, so none of them
-compiles until step 1 of the merge order completes. Consequently no client
-build was run: `E2E_AUTHORING.md` (Android) and `E2E_CONVENTIONS.md` (iOS)
-forbid running gradle and xcodebuild. Every symbol in the client changes was
-verified by reading its definition, not by compiling. The backend was verified
-for real — `go build`, `go test ./...` and `golangci-lint` are clean.
+`ham-proto#12` merged and was auto-tagged `v1.0.11`; all three consumers now
+pin it. The backend is verified for real against the released tag — `make pb`,
+`go build ./...`, `go test ./...` (75 packages) and `golangci-lint run ./...`
+are all clean.
+
+Neither client has been compiled. `E2E_AUTHORING.md` (Android — one shared AVD
+and build directory) and `E2E_CONVENTIONS.md` (iOS — the orchestrator builds
+centrally, and concurrent xcodebuild runs collide) both forbid running the
+build. Every symbol in the two client changes was therefore verified by reading
+its definition, not by compiling, and each client's own codegen convention was
+confirmed separately (Wire emits snake_case, SwiftProtobuf upper-cases
+acronyms). The first real build should be treated as part of the review.
