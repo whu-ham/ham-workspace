@@ -132,3 +132,49 @@ Neither client has an image grid component today, so each builds one.
 
 Consumer branches are developed against the proto feature branch; the
 `PROTO_VERSION` bump to the released tag happens after step 1.
+
+## 8. Adversarial review log
+
+Two rounds, run before the pull requests were finalised.
+
+**Round 1 — contract review** (before any consumer was written) found seven
+gaps, all fixed as contract comments so no consumer had to change: image order
+is display order; `width`/`height` are authoritative from the upload; `edited`
+is defined as `update_time` being present; the detail response always fills
+`course_info` and `self_comment`; upload carries `filename` on the first chunk
+only and signals moderation failure as an RPC error.
+
+**Round 1 — implementation review** (four finders: backend, Android, iOS,
+cross-repo consistency) produced 26 findings.
+
+**Round 2** tried to refute each one. Nine were refuted, including three the
+finders had ranked as real: a push failure turning a persisted like into a
+client error (already swallowed by then), an unsound OSS URL prefix check
+(already rewritten to parse both URLs), and uneven image grid rows (short rows
+are padded with spacers). One claim was disproved outright: iOS's push type
+does match the backend's `course_commentLiked`.
+
+Survivors, all fixed:
+
+| Repo | Finding |
+| --- | --- |
+| backend | No decoded-size budget before `image.Decode` — a small PNG declaring huge dimensions OOMs the server |
+| backend | A moderation-rejected image was left in OSS as a public-read object |
+| backend | Two mappers dropped images / `update_time` / `edited`, so a user's own image comment rendered as bare text |
+| backend | `FileExceedMaxSize` mapped to gRPC `Internal`, colliding with `SystemException` |
+| android | Push type was `course_comment_liked`; the server sends `course_commentLiked`, so the tap would silently do nothing |
+| android | Comment detail screen never refetched after an edit (iOS did) |
+| android | Client size cap was 8 MB against the server's 5 MB and iOS's 4 MB |
+| android | Only `GrpcException` was caught around the streaming upload, leaving the editor stuck uploading |
+| android | Documentation claimed a comment row opens the detail screen; nothing did |
+| ios | A `#Preview` outside its `#if DEBUG` region breaks the Release build |
+| both | One e2e case and two Android unit assertions did not pin what they claimed |
+
+### Known limitation
+
+`PROTO_VERSION` is still `v1.0.10` in all three consumers, so none of them
+compiles until step 1 of the merge order completes. Consequently no client
+build was run: `E2E_AUTHORING.md` (Android) and `E2E_CONVENTIONS.md` (iOS)
+forbid running gradle and xcodebuild. Every symbol in the client changes was
+verified by reading its definition, not by compiling. The backend was verified
+for real — `go build`, `go test ./...` and `golangci-lint` are clean.
