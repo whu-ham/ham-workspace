@@ -127,11 +127,16 @@ Neither client has an image grid component today, so each builds one.
 
 ## 7. Merge order
 
-1. `ham-proto` merges and is auto-tagged.
-2. Each consumer bumps `PROTO_VERSION` to that tag, then merges.
+1. `ham-proto` merges and is auto-tagged. — done: `ham-proto#12` merged and
+   auto-tagged `v1.0.11`.
+2. Each consumer bumps `PROTO_VERSION` to that tag, then merges. — done: all
+   three pin `v1.0.11`.
 
-Consumer branches are developed against the proto feature branch; the
-`PROTO_VERSION` bump to the released tag happens after step 1.
+Consumer branches were developed against the proto feature branch, so until
+step 1 landed every consumer generated code from a tag that predated the
+contract. That is why CI failed on its first run with `undefined:
+coursedetailpb.CourseDetailCourseCommentImage` while the same code built
+locally — locally the generated code came from the branch.
 
 ## 8. Adversarial review log
 
