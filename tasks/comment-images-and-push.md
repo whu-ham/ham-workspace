@@ -127,16 +127,23 @@ Neither client has an image grid component today, so each builds one.
 
 ## 7. Merge order
 
-1. `ham-proto` merges and is auto-tagged. — done: `ham-proto#12` merged and
-   auto-tagged `v1.0.11`.
-2. Each consumer bumps `PROTO_VERSION` to that tag, then merges. — done: all
-   three pin `v1.0.11`.
+1. `ham-proto` merges and is auto-tagged. — not done, and it is the
+   maintainer's call, not the implementer's.
+2. Each consumer bumps `PROTO_VERSION` to that tag, then merges.
 
-Consumer branches were developed against the proto feature branch, so until
-step 1 landed every consumer generated code from a tag that predated the
-contract. That is why CI failed on its first run with `undefined:
-coursedetailpb.CourseDetailCourseCommentImage` while the same code built
-locally — locally the generated code came from the branch.
+For development the contract is published as a pre-release tag cut from the
+branch — `v1.0.12-beta.1`, following the repo's existing `v1.0.4-beta.1` /
+`-beta.2` convention — and all three consumers pin it. That is enough to build
+and test without touching `main`.
+
+`ham-proto#12` was merged once without review; `ham-proto#13` (open) rolls it
+back and `ham-proto#14` (open) re-proposes the contract. `v1.0.11` is the tag
+the auto-tag workflow cut from that merge, and it still exists.
+
+Before a pre-release tag existed, every consumer generated code from `v1.0.10`,
+which predates the contract. That is why CI failed on its first run with
+`undefined: coursedetailpb.CourseDetailCourseCommentImage` while the same code
+built locally — locally the generated code came from the branch.
 
 ## 8. Adversarial review log
 
@@ -177,8 +184,8 @@ Survivors, all fixed:
 
 ### Verification status
 
-`ham-proto#12` merged and was auto-tagged `v1.0.11`; all three consumers now
-pin it. The backend is verified for real against the released tag — `make pb`,
+All three consumers pin `v1.0.12-beta.1`, cut from the contract branch. The
+backend is verified for real against that tag — `make install-all`,
 `go build ./...`, `go test ./...` (75 packages) and `golangci-lint run ./...`
 are all clean.
 
