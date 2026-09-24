@@ -167,8 +167,41 @@ identifies the module; it does not tint its controls.
 2. the function-grid tile on 我的,
 3. the module's intro / connect screen.
 
-Plus, optionally, the module's card watermark. That is the whole list — verified across both
-platforms, where each brand token has between 2 and 35 use sites, nearly all in those places.
+Plus, optionally, the module's card watermark.
+
+#### Where brand is actually used — measured
+
+The three-place rule is a target, and two modules do not meet it. Use-site counts, both
+platforms:
+
+| Token | iOS sites / files | Android sites / files | Meets the rule? |
+| --- | --- | --- | --- |
+| `brand.library` | 21 / — | 27 / 10 | indistinguishable — library's brand *is* `#007AFF`, the same hex as `accent` |
+| `brand.sport` | **3** / 3 | **38** / 15 | **no** — see below |
+| `brand.score` | 2 / 2 | 9 / 5 | marginal |
+| `brand.course` | 7 / — | 16 / 5 | yes |
+| `brand.schedule` | 2 / 2 | 6 / 3 | yes |
+| `brand.coursescore` | 4 / — | 9 / 3 | yes |
+| `brand.bus` | 3 / — | 9 / 4 | yes |
+| `brand.pay` | 2 / — | 5 / 3 | yes |
+
+**Android's sport module uses `brand.sport` far outside the three places** — as its working
+colour across the whole booking flow: the primary CTA (`SportSelectFooterView.kt:82`
+`.background(Color.ham_brand_sport)`), free-slot chips
+(`SportSelectItemTimeView.kt:28`), selectable court cells
+(`SportSelectItemCourtListDetailItemView.kt:47`), date chips (`SportSelectDateView.kt:43,60`),
+the sport function card (`SportMainViewFunctionButtonCard.kt:61,71,79,85,91`) and the status-card
+badge (`StatusSportCard.kt:122`).
+
+**iOS does the same thing visually but without the token** — `Color.green` at 21 sites in
+`iOS/ui/sport/`, `Color.orange` at 6 in the score screens, `Color.blue` at 68 across the app.
+Those are raw system colours where a `ham_brand_*` token exists.
+
+So the two clients agree on the *result* — both tint a module's own screens with its brand colour
+— and disagree only on whether it is written as a token. That makes the strict reading of the
+rule above wrong for 运动 and 成绩, and it is recorded as an open question in
+[§7](#7-undecided) rather than silently changed here. Until it is settled: **use the token, not
+the raw system colour**, and do not add new brand-tinted controls.
 
 #### Accent
 
@@ -622,17 +655,21 @@ work list.
 | | iOS | Android |
 | --- | --- | --- |
 | Icon call sites in app code | **236** `Image(systemName:)` in `iOS/` (287 counting tests, widgets, watchOS) | **218** `Icon(` |
-| Accessibility modifiers, **production-visible** | **4** — of 8 in the app; 5 of the 8 are `#if HAM_E2E` no-ops | 19 non-null of 290 `contentDescription` |
+| Accessibility modifiers, **production-visible** | **4** — of 8 in the app; 4 of the 8 are `#if HAM_E2E` no-ops | **7** real strings of 290 `contentDescription` — 271 `null`, 8 `""`, 4 more in test comments |
 | Hints | **0** | n/a |
 | Row / group merging | **0** `accessibilityElement(children:)` | **1** `mergeDescendants` — inside `HamButton` only, `Button.kt:66` |
 | State semantics | 1 `accessibilityAddTraits`, 1 `accessibilityValue` | **0** `toggleable`, **0** `selectable` |
 | Announcements | **0** `UIAccessibility.post` | **0** `liveRegion`, **0** `announceForAccessibility` |
-| Test identifiers | **4** `accessibilityIdentifier` | **7** `testTag` |
+| Test identifiers | **3** `accessibilityIdentifier` — **all inside `#if HAM_E2E`**, so a release build has **none** | **7** `testTag` |
 | Touch-target enforcement | none | **0** `minimumInteractiveComponentSize` |
 | Reduced motion | not checked | not checked |
 
-iOS has **4** production-visible accessibility modifiers against **236** icons. `PrintPrepareView.swift:200,201,228`
-is the only file in the app with more than one — it is the only existing pattern worth copying.
+iOS has **4** production-visible accessibility modifiers against **236** icons. Three of the four
+are in `PrintPrepareView.swift:200,201,228` — the print screen, added 2026-09-21, is the only
+place in either app where accessibility was designed rather than omitted, and it is the pattern to
+copy. All three `accessibilityIdentifier` sites (`Route.swift:320,350,367`) sit inside
+`#if HAM_E2E`, so Rule 5 is unmet in a release build on iOS: **no element in the shipping app has
+a test identifier.**
 
 **The nulls are absence, not intent.** A `contentDescription = null` is correct only inside a
 container that merges descendants *and* contains a text sibling. The app has **one**
@@ -667,12 +704,54 @@ icon inherits the icon's own size — which is why the back button is a 24 dp ta
 
 #### Contrast
 
+**Requirement.** Body text meets **4.5:1** against its background; large text (≥18pt, or ≥14pt
+bold) and non-text UI meet **3:1**. Both in light and dark mode. Nothing in either app currently
+enforces this, and the word "contrast" appeared once in the whole document set before this table.
+
+**Measured, light mode** (WCAG relative luminance, from the hexes in [§2.2](#22-colour)):
+
 | Pair | Ratio | Verdict |
 | --- | --- | --- |
-| Android `text.secondary` on `surface.secondary` (`#F9F9F9`) | **3.37:1** | below AA 4.5:1 for body text |
-| Android `text.secondary` on `surface.primary` (white) | **3.54:1** | below AA |
+| `text.primary` on `surface.primary` / `secondary` / `tertiary` | 19.95 / 21.00 / 18.08 | pass |
+| `text.secondary` #888888 on `surface.primary` #F9F9F9 | **3.37** | **fails 4.5** |
+| `text.secondary` #888888 on `surface.secondary` #FFFFFF | **3.54** | **fails 4.5** |
+| `text.secondary` #888888 on `surface.tertiary` #EDEEEF | **3.05** | **fails 4.5**, only just clears 3 |
+| Spec's own `text.secondary` #8E8E93 on #FFFFFF | **3.26** | **fails 4.5** — the spec value is no better than the shipped one |
+| Spec's own `text.secondary` #8E8E93 on #EDEEEF | **2.81** | **fails even 3:1** |
+| `text.tertiary` (#8E8E93 @ 60% → #BBBBBE) on #FFFFFF | **1.92** | **worst in the set** — invisible, not merely low |
+| `caption2` 11sp `text.secondary` on `surface.primary` | **3.37** | fails 4.5 at the smallest size — worst combination |
+| #888888 on dark `surface.primary` #000000 | 5.92 | pass — the hardcoded grey is only a light-mode problem |
 
-Two causes, and the second is the one that will not be fixed by editing a colour file:
+So **`text.secondary` and `text.tertiary` need new values, not new wiring.** #8E8E93 and
+#888888 both fail, and 60% opacity on top of that cannot be rescued. Raise the base grey until
+it clears 4.5:1 on all three surfaces, and define `text.tertiary` as a **solid** colour, not an
+alpha.
+
+**Text on a brand fill** — the status-card header band and the function-grid tile both put the
+brand hex at full strength on the same brand at 0.15 alpha over `surface.secondary`
+(`CommonStatusCard.kt:66,78` / `CommonStatusCard.swift:74`, `MyViewFunctionCard.swift:131-133`):
+
+| Brand | Android | iOS | Verdict |
+| --- | --- | --- | --- |
+| `coursescore` #283593 | 7.99 | 7.99 | pass |
+| `course` #1B5E20 | 6.21 | 6.21 | pass |
+| `schedule` #01579B | 5.82 | not verified (asset catalog) | pass |
+| `pay` #BF360C | 4.45 | 4.45 | passes 4.5 marginally |
+| `library` #007AFF | 3.30 | 3.30 | title passes 3:1, 12sp subtitle fails |
+| `bus` #A2845E | 3.00 | 3.00 | title passes 3:1, 12sp subtitle fails |
+| `sport` | 2.42 (Material #4CAF50) | **1.97** (#34C759) | **fails even 3:1** |
+| `score` | **1.92** (#FF9800) | **1.95** (#FF9500) | **fails even 3:1** |
+
+Green and orange are the failures: a mid-tone brand colour on a pale tint of itself cannot work,
+at any size. **Do not use the brand hex as the text colour on its own tint.** Use a darker
+`brand.<module>.text` — one token per module, measured to 4.5:1 — or `text.primary`.
+
+**Toasts** (`ToastType+UI.swift:8-32`) put white text on a system fill: `.info` #007AFF **4.02**,
+`.success` #34C759 **2.22**, `.warning` #FFCC00 **1.51**, `.error` #FF3B30 **3.55**. Three of
+four fail. Toast fills need their own darker shades.
+
+Two causes of the `text.secondary` failure, and the second will not be fixed by editing a colour
+file:
 
 1. `gray` is `#888888` in **both** `values/colors.xml:24` and `values-night/colors.xml:13`, so
    the dark variant is the same grey — the resource is adaptive in name only.
@@ -682,7 +761,10 @@ Two causes, and the second is the one that will not be fixed by editing a colour
    `Color.ham_text_secondary` (`Card.kt:83`, `TextField.kt:78`) therefore cannot respond to dark
    mode even after the XML is corrected.
 
-Fix both: make the accessor `colorResource`, and give the night value its own hex.
+Not computable statically: course text over a **user-chosen timetable photo**
+(`CourseMainViewBodyCell.kt:169-178`, `CourseViewBodyCourseItemView.swift:113-124`). Both
+platforms pick black or white from the background luminance, which is sound over a flat colour
+and unbounded over a photo. Require a scrim under the text.
 
 The spec defines `text.tertiary` ([§2.2](#22-colour)); **Android has no such token** — only
 primary and secondary exist — so placeholders and disabled labels silently fall back to
@@ -878,6 +960,7 @@ no exit is a dead end.
 | **Offline** | A persistent banner, not a toast — connectivity loss is a state, not an event. Content already loaded stays readable. |
 | **Session expired** | Its own state, with its own copy: the session ended, sign in again. Not a generic network error. |
 | **Rate-limited / blocked** | Show the server's message verbatim. Do not rewrite it into a generic failure. |
+| **Permission denied** | A blocking state whose action is **打开设置**, not 重试. The app cannot grant a permission it does not hold, so a retry button is a lie — the only way out is the system settings screen. Every screen that needs camera, location, notifications or exact alarms must render this state. |
 
 #### Current state
 
@@ -889,17 +972,46 @@ no exit is a dead end.
 | Shared error component | `ErrorView` — `iOS/ui/common/view/ErrorView.swift:8`; default action **返回** `:22` | `ErrorView` — `core/ui/…/intro/ErrorView.kt:48`; default action **完成** `:60` |
 | **Retry in the shared error component** | **no** | **no** |
 | Connectivity monitoring | one `NetworkReachabilityManager`, refreshes remote config only — **never drives UI** | **none** — 0 hits for `ConnectivityManager` / `NetworkMonitor` / `isOnline` |
-| Session-expired handling | `AuthPbInterceptor.swift:63` — `send` and `errorCaught` are pass-throughs, **no 401 handling** | no auth interceptor; `PbRequestHelper.kt:178,205` only add headers |
+| Session-expired handling | `AuthPbInterceptor.swift:63` — `send` and `errorCaught` are pass-throughs, **no 401 handling**. *One exception:* the library module recovers — `error.tokenExpired` renders a tappable red `LibraryRetryLoginView` (`iOS/ui/library/common/retry-login/`), re-signing in without leaving the screen | no auth interceptor; `PbRequestHelper.kt:178,205` only add headers. *Same exception:* `feature/library/…/ui/common/LibraryRetryLoginView.kt` |
 | Rate-limit state | none | none |
+| **Retry actions, app code** | **4** — `CourseScoreCourseDetailErrorView.swift:33`, `StatusBusCard.swift:31`, `StatusWeatherCard.swift:58`, `PrintPrepareView.swift:45` | **5** wired to a control, of 7 retry strings |
+| **Route to system Settings** | **none** — 0 hits for `openSettingsURLString` or `UIApplication.open` in all of `iOS/` | **1** — `Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM`, `AlarmPermissionSheet.kt:143`; the only hit in the app, and it is an Android-only feature |
+| Pull-to-refresh | hand-rolled overscroll: `scrollY < -scrollThreshold` fires `onRefresh()`, `StatusUpdateView.swift:57-63`. **0** uses of `.refreshable` — the behaviour exists, the API does not | one screen — `StatusContainerView.kt:157` |
 
-Three consequences worth stating plainly:
+Five consequences worth stating plainly:
 
 1. **The dominant error pattern on Android is a toast with no retry** — ~70 `ToastManager` call
    sites against 13 `ErrorView` sites. `ToastManager.kt:247` hardcodes 网络异常，请稍后重试 —
    text that promises a retry the UI does not offer.
 2. **Neither app knows it is offline.** The user sees a generic failure, not "you are offline".
-3. **Session expiry is indistinguishable from a network error** on both platforms, so the user
-   is told to retry something that cannot succeed.
+3. **Session expiry is indistinguishable from a network error** — *except in the library
+   module*, which is the only place on either platform that recovers. It proves the pattern is
+   implementable; it has simply not been generalised.
+4. **Two call sites label a retry as a dismissal.** iOS course center calls
+   `ErrorView(title: 请求失败) { vm.doRequest() }` and inherits the default **返回** label;
+   Android print does the same and inherits **完成**. Both do retry — they just tell the user
+   they are going back. Each is a one-argument fix: pass the label.
+5. **Error and empty render the same pixels.** Android's `when (loadState) { … else -> {} }`
+   and iOS's fall-through to an empty list mean a failed load and a genuinely empty result are
+   indistinguishable — and neither offers a retry.
+
+#### Where a retry exists — measured
+
+Across ~11 modules only **4 iOS screens and 6 Android screens** offer a retry, and of 14
+comparable cases only **4 match**. The sharpest divergence:
+
+| Case | iOS | Android |
+| --- | --- | --- |
+| Booking screen, seat list fails | **backs out only** — `ErrorView(title: 预约失败, backAction:)`, `LibraryBookErrorView.swift:22-25` | **retries** — `buttonText = stringResource(R.string.library_retry)` → `vm.fetchSeatList()`, `LibraryBookView.kt:134-141` |
+
+Also worth stating: Android's **scan screen has no camera-denial handling at all**. Scan Kit
+"reports to nobody" for a denied camera permission — the in-code comment at
+`QrCodeScanView.kt:205-208` records that the callback yields only `CAMERA_INIT_ERROR` and the
+gallery permission code, and that `scankit/b.java` returns without opening the camera. A denied
+permission therefore produces a black screen indefinitely. iOS does better — it toasts
+相机权限未开启 / 请前往"设置"开启 — and then cannot take the user there, because the app has
+no Settings route (see the table above). Both halves of the fix are missing on both platforms:
+iOS has the words but no destination, Android has neither.
 
 ---
 

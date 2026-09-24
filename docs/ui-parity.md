@@ -60,7 +60,7 @@ named. Where the agreed value is a new choice neither side has made, it is marke
 | Status dashboard | 10 | Card container differs, so every card inherits it; 2 of 7 cards missing on Android |
 | Course timetable | 7 | Grid metrics differ on all four axes |
 | Schedule | 5 | Countdown semantics differ; group controls and hero content differ |
-| Library | 12 | Largest numeric spread; print card is Android-only |
+| Library | 12 | Largest numeric spread; print ships on both — only the arrow size and share-hint copy differ |
 | Sport | 13 | Card order is swapped; decoration sizes differ throughout |
 | Score | 12 | Function-card fill and score-row typography are the visible ones |
 | CourseScore | 8 | Closest module — the filter chip already matches exactly |
@@ -391,13 +391,14 @@ work item. See `design-system.md` §2.10 for the rules.
 
 | Item | iOS | Android | Work |
 | --- | --- | --- | --- |
-| Icons labelled | **2** of 236 `Image(systemName:)` in `iOS/` — 4 accessibility modifiers in the whole app, most of them `#if HAM_E2E` no-ops | **7** real strings of 283 `contentDescription` mentions — the rest are 267 `null` and 8 `""` | label every meaningful icon on both |
+| Icons labelled | **2** `accessibilityLabel` of 236 `Image(systemName:)` in `iOS/` — 4 production-visible modifiers in the whole app; 3 of the 4 are in `PrintPrepareView.swift`, the only accessible screen in either app | **7** real strings of 290 `contentDescription` in `Android/` — 271 `null`, 8 `""` | label every meaningful icon on both |
 | Row / group merging | **0** `accessibilityElement(children:)` | **1** `mergeDescendants` | merge the row so decorative icons need no label of their own |
 | State semantics | 1 `accessibilityAddTraits` | **0** `toggleable`, **0** `selectable` | Android: expose toggle/selected state |
 | Announcements | **0** | **0** | announce toasts and loading on both |
-| Test identifiers | **4** | **7** | both — this doubles as the audit trail for the above |
+| Test identifiers | **3** `accessibilityIdentifier`, all `#if HAM_E2E` — a release build has none | **7** `testTag` | both — this doubles as the audit trail for the above |
 | Touch targets | unenforced | unenforced, 0 `minimumInteractiveComponentSize` | audit below-minimum targets; start with the timetable cell |
 | Large text clipping | ~184 fixed-width frames | ~202 fixed heights | replace fixed heights on text containers with minimum heights |
+| Contrast | `text.secondary` #8E8E93 → 3.26 on white; `text.tertiary` @60% → **1.92** | `text.secondary` #888888 → 3.37 / 3.54; brand text on brand tint: sport **2.42**, score **1.92** | both — new greys that clear 4.5:1, `text.tertiary` as a solid, a `brand.<module>.text` per module, darker toast fills. See `design-system.md` §2.10 "Contrast". |
 
 ---
 
@@ -414,8 +415,15 @@ so unlike most of this document these are not divergences — they are shared ga
 | Error default action | **返回** — `ErrorView.swift:22` | **完成** — `ErrorView.kt:60` | **重试** on both |
 | Retry in the shared error component | **no** | **no** | add to both |
 | Offline | none — reachability never drives UI | **none** — no connectivity check at all | persistent banner on both |
-| Session expired | none — `AuthPbInterceptor` is a pass-through | none — no auth interceptor | its own state and copy on both |
+| Session expired | none — `AuthPbInterceptor` is a pass-through | none — no auth interceptor | its own state and copy on both. **Both already solve it once, in the library module** (`LibraryRetryLoginView`) — generalise that, do not invent a second pattern |
 | Rate-limited / blocked | none | none | surface the server's message |
+| **Route to system Settings** | **none** — 0 hits for `UIApplication.open` in `iOS/` | **1** — `AlarmPermissionSheet.kt:143`, exact alarms only | add on both; required by the permission-denied state |
+| **Permission denied** | scan toasts 相机权限未开启 / 请前往"设置"开启, then cannot navigate | **scan has no denial handling at all** — Scan Kit reports to nobody, so a denied camera yields a black screen forever (`QrCodeScanView.kt:205-208`) | render the state on both: Android build it, iOS add the destination |
+| **Retry offered** | **4 screens** — `CourseScoreCourseDetailErrorView.swift:33`, `StatusBusCard.swift:31`, `StatusWeatherCard.swift:58`, `PrintPrepareView.swift:45` | **6 screens**, 5 of 7 retry strings wired | only 4 of 14 comparable cases match — audit the rest |
+| **Retry mislabelled as a dismissal** | course center: `ErrorView(title: 请求失败) { vm.doRequest() }` under the default **返回** | print: same shape under the default **完成** | pass the label — a one-argument fix each |
+| **Booking seat-list failure** | **backs out only** — `LibraryBookErrorView.swift:22-25` | **retries** — `library_retry` → `vm.fetchSeatList()`, `LibraryBookView.kt:134-141` | iOS add the retry; this is the sharpest single divergence in the module |
+| **Error vs empty** | fall through to an empty list — identical pixels | `when (loadState) { … else -> {} }` — identical pixels | distinguish them on both |
+| Pull-to-refresh | hand-rolled overscroll, `StatusUpdateView.swift:57-63` — **0** `.refreshable` | one screen, `StatusContainerView.kt:157` | behaviour exists on iOS; migrate it to `.refreshable` and extend Android |
 
 The Android error text 网络异常，请稍后重试 (`ToastManager.kt:247`) promises a retry the UI does
 not offer. It is shown at ~70 call sites against 13 `ErrorView` sites — the dominant pattern.
