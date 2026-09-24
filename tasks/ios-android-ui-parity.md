@@ -272,9 +272,12 @@ Found during the survey, not part of the token alignment:
 - **Loading, empty, error, offline and session-expired states are unrendered** on both. Neither
   shared error component offers a retry, and neither app can tell the user it is offline.
   `design-system.md` §3.10, work list `ui-parity.md` §17.
-- **Sport status card is iOS-only.** `Ham/iOS/ui/status/card/sport/StatusSportCardView.swift`
-  has no Android counterpart; `StatusViewCardType` (`StatusViewCardScoreManager.kt`) lists no
-  `Sport`. Android's `ScheduleCard.kt` also exists but has zero call sites.
+- ~~**Sport status card is iOS-only.**~~ **Retracted — Android has one too.**
+  `StatusViewCardType` lists `Sport` (`StatusViewCardScoreManager.kt:40`),
+  `StatusView.kt:250-252` composes it, and `StatusSportCard.kt` is 212 lines of real UI.
+  Same for the schedule card: `ScheduleCard.kt` is called at `StatusView.kt:247` — its own
+  header comment ("until now this was an empty container") is stale and misled the earlier
+  survey. Both platforms render all 7 status cards; the work is the container, not the cards.
 - **Android weather card shows no data-source attribution** while iOS links Apple's required
   WeatherKit attribution. Android fetches CMA data with a spoofed browser User-Agent and
   displays no credit — a compliance question more than a parity one.

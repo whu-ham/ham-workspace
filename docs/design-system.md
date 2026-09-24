@@ -614,7 +614,7 @@ Doing this is only cheap if durations live in tokens. Centralise them first.
 | Button press | none | **whole button dims to alpha 0.25** — `Button.kt:48` |
 | Loading → content | hard swap at 51 `ProgressView` sites | crossfade via `AnimatedContent`, spec almost never given |
 | List item | none | `.animateItem()` in one file only |
-| Pull-to-refresh | **none** — 0 uses of `.refreshable` | one screen only — `StatusContainerView.kt:157` |
+| Pull-to-refresh | hand-rolled, one screen: `scrollY < -128` slides a pill down, release fires `onRefresh()` — `StatusUpdateView.swift:15,57-63`, `StatusView.swift:72-74`. **0** uses of `.refreshable`, so the motion is ours and unsponsored | native, one screen — `rememberPullToRefreshState`, 300 px — `StatusContainerView.kt:157`; **plus 56 `BounceScrollView` sites that bounce and do not refresh** |
 | Reduced motion | not checked | not checked |
 
 **Highest-severity motion defect.** The most-used iOS transition is not ours and is not
@@ -1109,23 +1109,227 @@ Three consequences of the rule:
 
 ### 4.5 Forms and text entry
 
-*Pending measurement — see `/tmp/audit2/patterns.md`.*
+Both clients build forms the same way, and both build them **per field** — there is no shared
+form pattern, only a shared habit. Measured on the schedule editor and the user-center editors:
+
+| | iOS | Android | Agree? |
+| --- | --- | --- | --- |
+| Text-field label | **Placeholder-only** + leading icon — `TextField("输入日程名称", …)` after `Image(systemName: "flag.fill")` — `ScheduleInsertView.swift:35-40` | **Hint-only**; the schedule editor hand-builds a `BasicTextField` rather than using the shared component — `InsertEditHomeView.kt:146-165` | **yes** |
+| Non-text field | leading label, trailing value, chevron — `ScheduleInsertView.swift:53-62,91-115` | same — `InsertEditHomeView.kt:176-189,200-214` | **yes** |
+| Required marking | **never** — no `必填`, no asterisk, no colour; "optional" is written into the placeholder (`输入地点(可选)`) | **never** — `grep -rn "必填" --include='*.kt'` → 0 | **yes** |
+| Validation timing | **on submit only** — `validate()` from `save()` — `:282-311`, called `:314` | **on submit only** — first statement of `commit()` — `InsertEditViewModel.kt:179-186` | **yes** |
+| Error placement | **toast** — `ToastUtils.showError`; zero inline field errors | **toast** — `ToastManager.showError`; `HamTextField` has **no error slot at all** | **yes** |
+| Error copy | localized string for client rules; server message passed through for gRPC (`ToastUtils.showGRPCError`) | string resource for client rules; `ToastManager.showGrpcError(e)` for gRPC | **yes** |
+| Keyboard declared | **3** `.keyboardType` in the whole UI tree — 1 print, 2 debug | **5** `KeyboardOptions`, 4 of them in one print screen | **yes** (both: almost never) |
+| Submit placement | **two ship** — bottom full-width filled (schedule `:258-270`) *and* nav-bar trailing 保存 (profile `:75-81`) | **the same two** — bottom 48 dp (`InsertEditHomeView.kt:305-364`) *and* nav-trailing (`UserCenterInfoView.kt:65-75`) | **yes** |
+| Shared field component | **none in use** — `TextEdit.swift:11` has zero call sites; 14 hand-built `TextField(` | `HamTextField` exists (`TextField.kt:38`) but is used at only 10 call sites; the flagship editor bypasses it | **no** |
+
+Rules:
+
+1. **Create/edit a record → the primary action is a full-width, 48-tall primary button at the
+   bottom of the form.** Editing one value in place (nickname, group name) → nav-bar trailing
+   text button. Do not use both in one app for the same form type; that is what ships today and
+   it is not a decision.
+2. **A field error belongs below the field, not in a toast.** A toast names the problem and not
+   the field, then disappears. Add an error slot and a label slot to `HamTextField` and adopt it
+   on iOS, which currently has no field component at all.
+3. **Validation fires on submit.** Keep it. Per-keystroke validation on a 24-hour-time field is
+   worse than a clear error on tap.
+4. **Declare the keyboard.** A numeric field gets a number pad; today only the print screen does
+   (`PrintPrepareView.swift:223`, `PrintShareFilePrepareView.kt:253,274,326`).
+5. **Required fields are marked**, or none are. Today "optional" is written into the placeholder
+   and required is unmarked, so the user learns by failing.
+
+**Accessibility consequence of hint-only:** an iOS `TextField` prompt survives as the
+accessibility label after the user types; an Android hint does not — once the field has text,
+`HamTextField` reports no label at all. See [§2.10](#210-accessibility).
 
 ### 4.6 Confirmation and destructive actions
 
-*Pending measurement.*
+Measured across 13 destructive actions and 5 logout entry points:
+
+| Action | iOS | Android |
+| --- | --- | --- |
+| Log out — user center | **no confirm** — `UserCenterView.swift:66-75` | **no confirm** — `UserCenterMainView.kt:170-186` |
+| Log out — CAS settings | **no confirm** — `CasSettingView.swift:85` | **no confirm** — `CasSettingMainView.kt:78-80` |
+| Log out — dedicated screen | — | **no confirm** — `SyncLogoutView.kt:44-51` |
+| Delete schedule | **no** (behind 更多操作) — `ScheduleInsertView.swift:241-251`; single delete is a two-tap inline collapse — `ScheduleItemDetailView.swift:117-146` | **no** — `InsertEditViewModel.kt:166-177` |
+| Delete schedule group | **no** — `ScheduleGroupEditView.swift:78-83` | **no** — `GroupEditView.kt:141` |
+| Deactivate account (注销) | inline disclosure, **a lone 确定 with no cancel** — `SyncLogoutView.swift:38-60` | inline disclosure, same copy — `SyncLogoutView.kt:65-79` |
+| Revoke authorized app | **YES** — `.alert`, cancel + destructive — `AuthorizedAppsView.swift:35-46` | **YES** — `AlertDialog`, dismiss + confirm in `ham_red` — `AuthorizedAppsView.kt:117-147` |
+| Remove login device | **no** — `SyncLoginDeviceView.swift:118-132` | **no** — `UserCenterDeviceView.kt:72` |
+| Delete passkey | **no** — `UserCenterPasskeyConfigItemView.swift:28-34` | **no** — `UserCenterPasskeyConfigView.kt:201-203` |
+| Cancel library booking | slide-to-confirm (`Unlocker`, 95 %) — `LibraryModifyBookingView.swift:133-158` | slide-to-confirm (`HamLocker`) — `LibraryModifyBookingView.kt:126-138` |
+| Delete starred seat | — | **no** — `StarredSeatSettingView.kt:177-193` |
+| Delete course / class | — | **no**, fires from a dropdown — `CourseMainViewDropDownMenuCell.kt:186-228` |
+| Remove from 想上 | **no**, `allowsFullSwipe` deletes with no confirm — `CourseCenterSelfWantPageView.swift:42-48` | — |
+
+**11 of 13 destructive actions have no confirmation, and no logout anywhere confirms.** Each
+platform has exactly **one** correct confirmation — the same one, revoking an authorized app —
+and it is the only place either app uses a native alert for a decision: iOS has **1** `.alert(`
+in the entire UI tree, Android has **1** `AlertDialog` used as a confirmation (4 imports, 3 of
+them pickers and a privacy notice). There is no shared confirm component on either platform.
+
+Rules:
+
+1. **Confirm before anything that ends a session, ends an account, or destroys data** — logout,
+   注销, deleting a schedule, group, course, device, passkey, starred seat or theme, revoking
+   access. Today none of these confirm except one.
+2. **Do not confirm a reversible action.** Cancelling a booking already uses slide-to-confirm on
+   both platforms — keep it; it is a commitment gesture, not a dialog.
+3. **Use the platform's native alert**: iOS `.alert` with `role: .destructive` on the action and
+   `role: .cancel` on cancel; Android `AlertDialog` with dismiss left, confirm right, confirm in
+   `feedback.error`. `AuthorizedAppsView` on either side is the reference implementation.
+4. **Copy shape: title = the action noun, message = a question, buttons = cancel + the action.**
+   `确定要取消对该应用的授权吗？` is the pattern.
+5. **Never a lone 确定.** The deactivate-account disclosure on both platforms offers no cancel —
+   the only way out is collapsing the disclosure. That is not a confirmation.
 
 ### 4.7 Data loading and caching
 
-*Pending measurement.*
+| Screen | iOS | Android | Agree? |
+| --- | --- | --- | --- |
+| Status dashboard | **cache-first** — persisted snapshot in `init()`, then a 15 s poll — `StatusCourseCardViewModel.swift:30-37,50-59` | starts empty, polls a **local Room DAO** every 5 s — `CourseCardViewModel.kt:79-87` | **no** — iOS shows stale data immediately, Android shows nothing until the first fetch lands |
+| Course timetable | **cache-first**, local Realm — `CourseService.swift:37-48` | **cache-first**, Room — `CourseMainViewModel.kt:64-66` | yes |
+| Score | **cache-first**, Realm — `ScoreService.swift:13-14` | **cache-first**, Room — `ScoreMainViewModel.kt:50-58` | yes |
+| Schedule | **local only** — `@ObservedResults`, no network in the read path — `ScheduleView.swift:13` | **local only** — live Realm result — `ScheduleHomeViewModel.kt:19-20` | yes |
+| Library home | **network-first** — `init()` fetches, no disk cache — `LibraryMainViewModel.swift:30-37` | **network-first** — `MutableStateFlow(emptyList())`, never seeded — `LibraryMainViewModel.kt:50,70-77` | yes |
+| Sport home | **network-first** — `SportMainViewModel.swift:15-24` | **network-first** — `SportMainViewCurrentOrderCardVM.kt:25-36` | yes |
+
+Persistence: iOS uses `UserDefaults` (App Group), `@AppStorage`, Realm and
+`NSUbiquitousKeyValueStore`; Android uses Room (`ham.db`), MMKV, Realm and CCKV. **Both use
+Realm for the schedule.**
+
+**No stale-while-revalidate policy exists on either platform** — `grep -rn
+"staleWhileRevalidate\|cacheThenNetwork\|CachePolicy"` returns zero on both trees. The status
+dashboard is the closest thing, and only on iOS.
+
+Pull-to-refresh: iOS has **0** `.refreshable` and a **hand-rolled** indicator on the status
+dashboard — drag past **128 pt** and a pill slides down reading `已请求刷新`; releasing fires
+`vm.contentVM.updateAllCard()` and the pill fades after 2 s —
+`StatusUpdateView.swift:15,31-32,57-59`, wired at `StatusView.swift:72-74`. Android has **1**
+real `rememberPullToRefreshState` (`StatusContainerView.kt:157`, **300 px** threshold) plus
+**56** `BounceScrollView` call sites that overscroll-bounce **without refreshing**. So one screen
+on each platform refreshes, at thresholds that differ by more than 2×, and 56 more Android
+screens promise a refresh they do not perform. (The iOS pill is `Color.blue`, a raw system
+colour — see [§2.2](#22-colour).)
+
+Rules:
+
+1. **Local-first for anything the user has already seen** — course, score, schedule. Render from
+   the local store on appearance; refresh in the background.
+2. **Network-first for live state** — bookings, current orders. A spinner from empty is correct
+   when the data is about *now*.
+3. **Stale-while-revalidate is the rule**: render the persisted value, revalidate in the
+   background, replace on success, **keep the stale value on failure**. Write it once as a shared
+   policy; today it exists on one screen on one platform.
+4. **Persist the last good value for the dashboard.** iOS does; Android does not, so its cards
+   are blank on every cold start until the first fetch.
+5. **Pull-to-refresh on every list that can go stale**, not just the status dashboard. Android's
+   56 `BounceScrollView` sites must either refresh or stop bouncing — gesture feedback that does
+   nothing is worse than no gesture.
 
 ### 4.8 Search, filter, sort, pagination
 
-*Pending measurement.*
+The main search surface is course-score search → result list. Long lists elsewhere: course
+comments, 想上 history, comment history, score rank, authorized apps, library history, library
+seats.
+
+| | iOS | Android | Agree? |
+| --- | --- | --- | --- |
+| Where the query lives | **one** `@Published var keyword` on `CourseScoreMainViewModel`, injected as `@EnvironmentObject` and shared by home, search bar and result — `CourseScoreMainViewModel.swift:32` | `@AssistedInject` `var keyword by mutableStateOf("")` on `CourseScoreSearchViewModel`, one per search screen, partly carried in the route — `CourseScoreSearchViewModel.kt:78` | **no** |
+| Debounce | **none** — `.onChange(of: em.keyword)` fires a gRPC `queryCourse` on **every keystroke**, guarded only by a blank check and a stale-response check — `CourseScoreSearchViewSearchBar.swift:33-35`, `CourseScoreMainViewModel.swift:39-51` | **none needed** — `searchCourse` is an explicit call on submit or history tap, not a keystroke hook — `CourseScoreSearchViewModel.kt:151-165` | **no** — iOS requests per character |
+| Filter control | 3 inline chips in an `HStack` under the search bar — `CourseScoreResultViewSearchBar.swift:55-60` | 3 chips in a `LazyRow` — `CourseScoreResultItemFilterFunctionView.kt:31-66` | **yes**, near-identically styled |
+| Filter chip styling | selected = blue text on 10 % blue; unselected = grey on 10 % grey — `:64-81` | selected = `ham_blue` @10 %; unselected = `ham_gray` @10 %; `RoundedCornerShape(6.dp)`, `HamFontStyle.caption` — `:70-86` | **yes** |
+| Filter gated? | **no** | **yes — A/B flag** `enableCourseDetailConfig.enableCourseScoreResultFilter` — `CourseScoreSearchViewModel.kt:89-92` | **no** |
+| Filter persisted? | **no**, defaults to `.totalDesc` every time — `CourseScoreResultViewModel.swift:23` | **no**, `mutableStateOf(TOTAL_DESC)` — `CourseScoreSearchViewModel.kt:118-119` | yes |
+| Search *history* persisted | **yes**, Realm, capped to 30 — `CourseScoreResultViewModel.swift:98-104`, `CourseScoreHomeViewHistoryCard.swift:14,23` | **yes**, MMKV-backed `LSKV` — `CourseScoreContext.kt:26-36` | yes |
+| Sort control | **none separate** — the 3 chips *are* the sort; all three hard-coded descending — `CourseScoreResultViewSearchBar.swift:89-98` | same — `CourseScoreResultItemFilterFunctionView.kt:31-66` | yes |
+| Sort elsewhere | **none** — `grep -rn "sorted\|sort(" --include='*.swift' iOS/ui/coursescore` → 0 | **none user-facing** — only status-card and semester ordering | yes |
+| Pagination mechanism | cursor, `resp.nextRequestCursor`, finish when `item.isEmpty` — `CourseScoreResultViewModel.swift:50-79` | same cursor design — `CourseScoreSearchViewModel.kt:183-218` | yes |
+| Page size | server-decided for score and comments; **10** for authorized apps — `AuthorizedAppsViewModel.swift:14` | server-decided; **20** for comments — `CourseCommentViewModel.kt:139-166`; **10** for authorized apps — `AuthorizedAppsViewModel.kt:34` | **no** for comments (server vs 20) |
+| Load-more trigger | second-to-last item appears — `CourseScoreResultView.swift:26-30` | second-to-last item appears — `CourseScoreResultView.kt:221-227` | **yes** |
+| Footer loading indicator | **absent** on the score result — `searchResultLoadState` is published but never rendered — `CourseScoreResultViewBody.swift:22-41` | **absent** on the score result; only the initial full-box spinner | **no indicator at all** |
+| Footer indicator elsewhere | **yes** — `ProgressView()` as a trailing row for want/comment history — `CourseCenterSelfWantPageView.swift:56-62` | trailing row while paging, `HamLoadingProgressBar()` on first load — `CourseCenterWantViewModel.kt:47-70` | yes |
+| Result count | **never** on the score result. Nav titles are static (`想上历史`, no count) — `CourseCenterSelfWantPageView.swift:68` | never on the score result; **count in the nav title** for want/rank (`想上历史(%1$d)`) and a filtered seat count in library | **no** |
+
+Rules:
+
+1. **Debounce search input — 300 ms, or fetch on explicit submit.** A gRPC request per keystroke
+   is what iOS does today; it is not acceptable. `grep -rn "debounce"` finds debouncing in the
+   status card-order manager and the bus card and **not** in search.
+2. **The query belongs to the screen, not to a shared singleton.** iOS's
+   `@EnvironmentObject CourseScoreMainViewModel` means a keyword typed on the search screen is
+   still live on the home screen; Android's per-screen `@AssistedInject` VM is the better shape.
+3. **A filter ships to everyone or to no one.** Android's three chips sit behind
+   `enableCourseScoreResultFilter`; that is an experiment, not a design, and it makes the two
+   platforms differ for reasons no designer chose.
+4. **Separate *what is included* from *what order*.** Today sort and filter are the same chip
+   row, all descending, with no ascending toggle. Either give the row one name and add
+   ascending/descending, or split it into a filter row and a sort control.
+5. **Persist the filter** the way you already persist history. Today the order resets to
+   `TOTAL_DESC` on every visit on both platforms while the keywords survive.
+6. **Render a trailing loading row whenever a page is in flight, and an end-of-list marker when
+   it is not.** `searchResultLoadState` is already computed on both platforms and thrown away on
+   the one screen that pages. iOS does render one for want/comment history — that is the pattern.
+7. **Show the result count on any filtered or searched list.** Android does for want, rank and
+   library seats; iOS does not; neither does for the score result, which is the list that most
+   needs it.
 
 ### 4.9 Lists, grids, and card columns
 
-*Pending measurement.*
+Every module's main screen, by container:
+
+| Screen | iOS | Android | Agree? |
+| --- | --- | --- | --- |
+| Status dashboard | `ScrollView { VStack(spacing: 0) }` — hand-stacked card column, **not lazy** — `StatusView.swift:22-23` | `Column` in a bouncy scroll host — `StatusContainerView.kt:90,103,130` | yes |
+| Course timetable | **hand-built absolute grid** — `GeometryReader` + `ZStack` + `.offset(x:y:)`, 5-or-7 × 13 — `CourseViewBodyCourseBodyView.swift:18-46` | **hand-built absolute grid** — `Box` + `.offset`, size from `onSizeChanged` — `CourseMainView.kt:152-180` | yes |
+| Library home | `ScrollView { VStack }` — `LibraryMainView.swift:15-16` | `Column` in a bounce host — `LibraryMainView.kt:40,80` | yes |
+| Sport home | `ScrollView { VStack }` — `SportMainView.swift:15-16` | `Column` in a bounce host — `SportMainView.kt:30` | yes |
+| Score | `ScrollView { VStack }` — `ScoreMainView.swift:18-20` | **`LazyColumn`** — `ScoreMainView.kt:107` | **no** — the only lazy main list on Android |
+| Schedule list | **`LazyVStack`** in a `ScrollView` — `ScheduleView.swift:349,384` | **`LazyColumn`** — `ScheduleMainViewItemListView.kt:86` | yes |
+| "My" function grid | **horizontal `ScrollView` of hand-laid `HStack` rows**, driven by cloud config `row`/`col` — `MyViewFunctionCard.swift:49-67` | **`LazyHorizontalStaggeredGrid(rows = StaggeredGridCells.Fixed(row))`**, same config — `MyViewFunctionComponentView.kt:203-214` | **no** |
+| CourseScore home | `VStack` of cards + a **custom** wrapping-flow chip layout — `CourseScoreHomeViewHistoryCard.swift:22-23` | `VStack` + `LazyHorizontalStaggeredGrid`, `row = 4` — `CoursScoreMainView.kt:141` | **no** |
+| CourseScore result | `ScrollView { LazyVStack(spacing: 8) }` — `CourseScoreResultViewBody.swift:22-23` | `LazyColumn(spacedBy(8.dp), contentPadding = 16.dp)` — `CourseScoreResultView.kt:218-222` | yes |
+| Library floor/book grid | *(no equivalent found)* | `LazyVerticalGrid(columns = GridCells.Fixed(4))` — `LibraryBookView.kt:387-389` | unmeasured |
+
+Counts: Android has **17** `LazyColumn(` call sites and **3** files using any `Grid`/`StaggeredGrid`;
+iOS has **11** `LazyVStack`/`LazyHStack`, **6** `LazyVGrid` files (all small pickers), and ≈**2**
+real SwiftUI `List`s — both chosen because `swipeActions` only exists on `List` rows
+(`CourseCenterSelfWantPageView.swift:16-18`).
+
+Dividers:
+
+| List | iOS | Android | Agree? |
+| --- | --- | --- | --- |
+| User-center settings rows | `Divider()` after each of 5 rows — `UserCenterView.swift:45,47,49,51,53` | `HamDivider()` in the same 5 positions — `UserCenterMainView.kt:128,135,142,149,156` | yes |
+| Schedule list | **no dividers** — `Spacer().frame(height: 12)`, one lone `Divider()` between  upcoming and past — `ScheduleView.swift:386-396` | **no dividers** — `Spacer(Modifier.height(16.dp))` — `ScheduleMainViewItemListView.kt:164` | yes in kind, **12 vs 16** in value |
+| CourseScore result / comments | no dividers, `spacing: 8` | no dividers, `spacedBy(8.dp)` | yes |
+| Course-center want / comment / rank | `Divider()` between rows, `listRowSeparator(.hidden)` — `CourseCenterSelfWantPageView.swift:38-40,52` | `HamDivider()` — `CourseCenterWantCardView.kt:53,59` | yes |
+| Form / editor option rows | `Divider()` — `ScheduleInsertGroupView.swift:43,65`, `ScheduleInsertAlarmView.swift:48` | `HamDivider()` — `InsertEditSelectGroupView.kt:92,127`, `InsertEditSelectAlarmView.kt:71` | yes |
+| Divider component | **none** — **76 raw `Divider()`** call sites, no shared thickness or colour | **`HamDivider`** — `Divider.kt:17-24`, **66** call sites, plus `HamDividerVertical` `:26-33` | **no** |
+
+Rules:
+
+1. **A grid is for a bounded, fixed set of tiles. A list is for unbounded data.** That is the
+   rule the code already follows: grids appear only for the cloud-configured function launcher,
+   the library 4-column floor grid, search-history chips and small colour/time pickers.
+2. **Anything that can exceed ~30 items is lazy.** iOS's score screen uses
+   `ScrollView { VStack }` where Android uses `LazyColumn`; iOS's status, library and sport
+   homes are non-lazy card columns too. Make them lazy.
+3. **The timetable is the documented exception.** Neither platform uses a lazy grid for the
+   5-or-7 × 13 course grid; both compute cell size and place items with `offset`. Keep it, and
+   keep it in one file per platform.
+4. **Use the platform's real grid for the function launcher.** iOS hand-lays `HStack` rows
+   inside a horizontal `ScrollView` from the same cloud config that Android feeds to
+   `LazyHorizontalStaggeredGrid`. One of them is a reimplementation of the other.
+5. **Cards are separated by spacing, rows by a divider.** 8 between cards in a column (both
+   agree today); a hairline divider between the rows of a settings or option list (both agree
+   today). Do not put a divider between cards, and do not separate settings rows with padding.
+6. **Schedule rows are 12 apart on both.** iOS ships 12; Android ships 16. The row already has
+   its own padding; 12 is the value.
+7. **Ship a divider component on iOS.** 76 raw `Divider()` sites with no shared thickness or
+   colour is 76 chances to drift; Android's `HamDivider` is the model.
 
 ---
 
@@ -1212,6 +1416,30 @@ implementation.
    oversight).
 5. **Elevation.** Spec says none, matching both platforms. Confirm we are not adding shadow as
    part of this work.
+6. **Is a module's brand colour that module's accent?** [§2.2](#22-colour) says interactive
+   elements take `accent` everywhere and lists brand at three places. Both clients actually
+   tint a module's own screens with its brand colour: Android `brand.sport` at 38 sites
+   including the booking CTA (`SportSelectFooterView.kt:82`) and the slot chips
+   (`SportSelectItemTimeView.kt:28`); iOS the same result via raw `Color.green` at 21 sites.
+   Two coherent answers — (a) **strict**: `accent` everywhere interactive, and the sport and
+   score flows change colour; (b) **module accent**: inside its own module a brand colour may
+   act as the accent, on every module, and the rule becomes "accent on shared surfaces — 状态,
+   我的, standalone — brand inside the module". (b) matches what ships and preserves module
+   identity; (a) is simpler and matches the contrast findings, since green-on-green-tint fails
+   at 1.97–2.42:1. **Decide before applying [§2.2](#22-colour) to the sport and score screens.**
+7. **Contrast floor.** [§2.10](#210-accessibility) now requires 4.5:1 body / 3:1 large. Confirm
+   we are adopting WCAG AA as the bar, since meeting it changes `text.secondary`, retires
+   `text.tertiary`'s 60% alpha, and needs a `brand.<module>.text` per module.
+8. **Search: as-you-type, or on submit?** [§4.8](#48-search-filter-sort-pagination) forbids a
+   request per keystroke, but permits either a 300 ms debounce or an explicit submit. iOS
+   currently fetches on every character and Android only on submit, so the two clients are the
+   two options. Pick one experience.
+9. **Is the score-result filter shipping?** [§4.8](#48-search-filter-sort-pagination) rule 3 says
+   a filter ships to everyone or to no one. Android gates it behind
+   `enableCourseScoreResultFilter`; iOS does not gate it. Say which is true.
+10. **Confirm the submit split in [§4.5](#45-forms-and-text-entry) rule 1** — bottom-of-form for
+    create/edit, nav-bar trailing for editing one value in place. Both platforms currently ship
+    both placements; this rule assigns them by form type rather than by screen.
 
 ---
 
@@ -1227,8 +1455,9 @@ What the two shipped clients do differently today. Each entry is a task, not a s
 | Gap | Detail |
 | --- | --- |
 | ~~Print is Android-only~~ — **retracted** | Print ships on **both** clients and is near-identical. An earlier revision of this table said iOS had only an unreferenced data layer; that was wrong. iOS has `Route.libraryPrint` / `Route.printPrepare` (`Route.swift:33-34`), `LibraryPrintView.swift`, `PrintPrepareView.swift` and an E2E suite. The real divergences are: the share hint is two different strings, iOS picks the file behind an action sheet while Android opens the document picker directly, iOS replaces the printer list with `没有找到打印机` where Android appends it, and Android re-fetches the printer list on every recomposition. — [§12 Print](screens.md#12-print-打印--platforms-both) |
-| Sport status card is iOS-only | Android's `StatusViewCardType` lists no `Sport`. |
-| Android schedule status card is an empty stub | `ScheduleCard.kt` has zero call sites; iOS renders one. |
+| ~~Sport status card is iOS-only~~ — **retracted** | Retracted 2026-09-24. `StatusViewCardType` **does** list `Sport` (`StatusViewCardScoreManager.kt:40`), `StatusView.kt:250-252` composes it, and `StatusSportCard.kt` is 212 lines of real UI with an order card, area number and pay row. An earlier survey said otherwise; it was wrong. |
+| ~~Android schedule status card is an empty stub~~ — **retracted** | Retracted 2026-09-24. `ScheduleCard.kt` is called at `StatusView.kt:247` and is fed by `ScheduleCardViewModel` (Realm). The file's own header comment still says "until now this was an empty container" — the container has since been filled, and the stale comment is what the earlier survey read. |
+| **Android renders all 7 status cards** | Both platforms render the same seven: library, weather, course, bus, schedule, sport, plus the CAS alert card (`CasErrorCardView()` composed above the card-order loop, `StatusView.kt:229`). The earlier "5 of 7, no sport, no schedule" was wrong on both counts. What actually differs is the card *container* — radius and padding — which every card inherits, not which cards exist. |
 | Android weather card shows no data-source attribution | iOS links Apple's required WeatherKit attribution. Android fetches CMA data with a spoofed browser UA and displays no credit. |
 | RN bundles are 6 commits apart | Android at `4f3d241`, iOS at `0939555`; one of the six is a bug fix. |
 | Language and widget settings are Android-only | May be correct as-is — see platform rules. |
@@ -1287,6 +1516,20 @@ What the two shipped clients do differently today. Each entry is a task, not a s
 | 21 Android and 27 iOS hand-rolled cards bypass the shared primitive | various |
 | Android has no shared section-header component; iOS has it in one screen only | — |
 | No minimum tap target enforced: Android's smallest is 16×16dp, iOS's ~14×14pt | various |
+| iOS fires a gRPC `queryCourse` on **every keystroke** — no debounce | `CourseScoreSearchViewSearchBar.swift:33-35` |
+| Android gates the score-result filter behind an A/B flag; iOS does not | `CourseScoreSearchViewModel.kt:89-92` |
+| `searchResultLoadState` is computed on both platforms and never rendered as a footer | `CourseScoreResultViewBody.swift:22-41`, `CourseScoreResultView.kt:221-227` |
+| iOS's shared `TextEdit` has **zero** call sites; 14 hand-built `TextField`s | `iOS/ui/common/compoment/TextEdit.swift:11` |
+| Android's `HamTextField` has no error slot, and the flagship schedule editor bypasses it | `TextField.kt:38`, `InsertEditHomeView.kt:146-165` |
+| **56** Android `BounceScrollView` sites overscroll-bounce without refreshing | various |
+| Pull-to-refresh thresholds differ >2× — iOS 128 pt hand-rolled, Android 300 px native | `StatusUpdateView.swift:15`, `StatusContainerView.kt:157` |
+| Android's status dashboard starts empty and never shows a persisted snapshot; iOS does | `CourseCardViewModel.kt:79-87` |
+| iOS writes **76** raw `Divider()`; Android has a shared `HamDivider` at 66 sites | iOS various / `Divider.kt:17-24` |
+| Schedule row spacing is 12 on iOS and 16 on Android | `ScheduleView.swift:388,395` / `ScheduleMainViewItemListView.kt:164` |
+| iOS's score screen is `ScrollView { VStack }` where Android's is `LazyColumn` | `ScoreMainView.swift:18-20` / `ScoreMainView.kt:107` |
+| iOS hand-lays the function-launcher grid; Android uses `LazyHorizontalStaggeredGrid` from the same cloud config | `MyViewFunctionCard.swift:49-67` / `MyViewFunctionComponentView.kt:203-214` |
+| The deactivate-account disclosure offers 确定 with **no cancel**, on both platforms | `SyncLogoutView.swift:38-60`, `SyncLogoutView.kt:65-79` |
+| **No logout anywhere confirms** — 5 entry points, 0 confirmations | [§4.6](#46-confirmation-and-destructive-actions) |
 
 ---
 
@@ -1306,6 +1549,18 @@ What the two shipped clients do differently today. Each entry is a task, not a s
 - [ ] Every icon has a label, or is explicitly decorative — [§2.10](#210-accessibility).
 - [ ] Duration and easing come from [§2.9](#29-motion); reduced motion is honoured.
 - [ ] Loading, empty, error and offline are all handled — [§3.10](#310-non-content-states).
+- [ ] A field error appears **on the field**, not only in a toast —
+      [§4.5](#45-forms-and-text-entry).
+- [ ] Destructive actions confirm, or are one of the reversible exemptions in
+      [§4.6](#46-confirmation-and-destructive-actions).
+- [ ] Lists render from local state first, revalidate in the background, and **keep the stale
+      value on failure** — [§4.7](#47-data-loading-and-caching).
+- [ ] Search input is debounced or submits explicitly — no request per keystroke.
+- [ ] Paging renders a trailing loading row, and a marker when the list ends —
+      [§4.8](#48-search-filter-sort-pagination).
+- [ ] A list that can exceed ~30 items is lazy, and a grid is only for a bounded tile set —
+      [§4.9](#49-lists-grids-and-card-columns).
+- [ ] Dividers come from a component with a token thickness and colour, not a raw `Divider()`.
 - [ ] Interactive elements meet the 44 minimum tap target.
 - [ ] `maxLines` is paired with `Ellipsis` on Android.
 - [ ] The same screen exists on the other platform, or the divergence is listed in
@@ -1364,6 +1619,6 @@ Recorded here rather than invented, because they need an owner:
 | --- | --- |
 | Who owns this specification? | No named owner or reviewer. `logic-parity.md` §12 has ~30 rows of "needs a product decision" with no decider. |
 | How is it versioned? | No scheme. Needed before it can be cited in code review. |
-| What happens to a retired token or screen? | No deprecation rule. §8 lists dead code (`PrintStatusCard.kt`, `ScheduleCard.kt`, `dimens.xml`) with no record of removal once done. |
+| What happens to a retired token or screen? | No deprecation rule. §8 lists dead code (`PrintStatusCard.kt`, `dimens.xml`) with no record of removal once done. Two entries here were **retracted** after a re-check proved the code was live — see §8.1 — so the list itself needs re-verification before anyone acts on it. |
 | How is a new screen added? | `screens.md` documents the eight fields of a section but not how to propose one or who measures it. |
 | What settles a §7 open question? | No escalation path. |

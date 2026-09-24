@@ -38,9 +38,9 @@ in [`design-system.md`](design-system.md) §2:
 | Group | Values |
 | --- | --- |
 | radius | `1` 2 · `2` 4 · `3` 6 · `4` 8 · `5` 10 · `6` 12 · `card` 16 |
-| spacing | `2` 4 · `3` 8 · `4` 12 · `5` 16 · `6` 24 |
-| icons | `xs` 12 · `sm` 20 · `md` 24 · `lg` 32 · `xl` 64 · `hero` 72 · `watermark` 128 |
-| type | `largeTitle` 34 · `title` 28 · `title2` 22 · `title3` 20 · `body` 17 · `callout` 16 · `caption` 12 · `caption2` 11 |
+| spacing | `1` 2 · `2` 4 · `3` 8 · `4` 12 · `5` 16 · `6` 24 · `7` 32 |
+| icons | `xs` 12 · `sm` 20 · `md` 24 · `lg` 32 · `xl` 64 · `hero` 72 · `watermark` 128 · plus the named containers `plate` 40 · `badge` 32 · `tile` 64 · `empty` 64 · `banner` 72 |
+| type | `largeTitle` 34 · `title` 28 · `title2` 22 · `title3` 20 · `headline` 17 · `body` 17 · `bodyBold` 17 · `callout` 16 · `subheadline` 15 · `footnote` 13 · `caption` 12 · `captionBold` 12 · `caption2` 11 |
 | surface | `primary` #F9F9F9 · `secondary` #FFFFFF · `tertiary` #EDEEEF · `tint` #E6F1FF |
 | text | `primary` · `secondary` #8E8E93 · `tertiary` @60% · `link` · `danger` #FF3B30 |
 | accent | #007AFF — the app-wide interactive colour, the same on every module |
@@ -581,10 +581,13 @@ plus `请于%@-%@完成支付` (`:48`).
 loading / error / empty state. Publish 60 with an order, −1 without. Refresh on init and on
 pull-to-refresh only (`StatusSportCardVM.swift:15-21`); no polling.
 
-`Divergence:` Android has no sport status card (`StatusViewCardType` has no `Sport` case,
-`AOS/utils/StatusViewCardScoreManager.kt:25-31`) even though the domain module, routes, brand
-colour and strings all exist. iOS's chip has no fill, so it is white-on-white in dark mode
-(`StatusSportCardView.swift:26-28`), and the VM never publishes a score.
+`Divergence:` **Retracted 2026-09-24 — Android *does* have a sport status card.** An earlier
+revision said `StatusViewCardType` had no `Sport` case; it does
+(`AOS/utils/StatusViewCardScoreManager.kt:40`, `Sport(requiresCasLogin = true)`),
+`AOS/StatusView.kt:250-252` composes it, and `StatusSportCard.kt` is 212 lines with an order
+card, area number and pay row. What remains genuinely divergent: iOS's chip has no fill, so it
+is white-on-white in dark mode (`StatusSportCardView.swift:26-28`), and the iOS VM never
+publishes a score, so the card earns no place in the ordering.
 
 ---
 

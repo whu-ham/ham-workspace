@@ -31,6 +31,7 @@ Wording divergences are **not** here — see `copy-and-strings.md` §7. Behaviou
 - [16. Accessibility](#16-accessibility)
 - [17. Non-content states](#17-non-content-states)
 - [18. Screens already at parity](#18-screens-already-at-parity)
+- [19. Patterns](#19-patterns)
 
 ---
 
@@ -57,7 +58,7 @@ named. Where the agreed value is a new choice neither side has made, it is marke
 
 | Module | Screens | Notes |
 | --- | --- | --- |
-| Status dashboard | 10 | Card container differs, so every card inherits it; 2 of 7 cards missing on Android |
+| Status dashboard | 10 | Card container differs, so every card inherits it. All 7 cards exist on both — an earlier "2 of 7 missing on Android" was wrong |
 | Course timetable | 7 | Grid metrics differ on all four axes |
 | Schedule | 5 | Countdown semantics differ; group controls and hero content differ |
 | Library | 12 | Largest numeric spread; print ships on both — only the arrow size and share-hint copy differ |
@@ -78,7 +79,7 @@ named. Where the agreed value is a new choice neither side has made, it is marke
 | Card radius | 16 | 12 | **16** | Android → 16. Affects all 5 Android cards. 🔴 |
 | Card header padding | 12 all sides | v12 / h16 | **12 all sides** | Android → 12 horizontal. 🟠 |
 | Card content padding | 12 (parameter, bus passes 0) | 16 | **12** | Android → 12, and add a `padding` parameter so the bus card can pass 0. 🟠 |
-| Cards rendered | 7 (weather, library, course, bus, sport, schedule, casAlert) | 5 (no sport, no schedule) | **7** | Android: build the sport card; wire up `ScheduleCard`, which exists but is never composed. 🔴 |
+| Cards rendered | 7 (weather, library, course, bus, sport, schedule, casAlert) | **7** — same seven; all six types composed in the card-order loop, `StatusView.kt:231-253`, CAS card above it `:229` | **7** | none 🔴→✅. Previously read as "5 — no sport, no schedule"; that was wrong. `StatusViewCardType` lists `Sport` (`StatusViewCardScoreManager.kt:40`) and `StatusSportCard.kt` is 212 lines of real UI. **The real work is the container** (radius 16 vs 12, padding 12 vs 16), which every card inherits — see the three rows above. |
 | CAS alert card | Solid red pill, white text, 信息门户登录失败 + 重新登录 | Message only, no button | **Message + 重新登录 button** | Android: add the action. 🔴 |
 | Weather — temperature | 36, rounded | 28 | **36 rounded** | Android → 36 with rounded figures. 🔴 |
 | Weather — attribution | Links Apple's WeatherKit attribution | **none** | **Credit the data source** | Android: add a source credit. This is compliance, not cosmetics. 🔴 |
@@ -91,7 +92,7 @@ named. Where the agreed value is a new choice neither side has made, it is marke
 | Bus — distance | `328m` (bare) | 距你328m | **距你328m** | iOS: add the prefix. 🟠 |
 | Bus — states | 已到站, 即将到达 | 到达 only | **both** | Android: add 即将到达. 🟠 |
 | Bus — load error | 获取地理位置异常 / 更新校巴信息异常 | 加载时遇到了错误 | **遇到了错误** | Both: drop 异常. 🟠 |
-| Pull to refresh | 已请求刷新 | none | **已请求刷新** | Android: add. 🟡 |
+| Pull to refresh | hand-rolled pill, one screen: drag past **128 pt** → 已请求刷新, release fires `onRefresh()` — `StatusUpdateView.swift:15,57-63` | native `rememberPullToRefreshState`, one screen, **300 px** — `StatusContainerView.kt:157`; **+56 `BounceScrollView` sites that bounce without refreshing** | **present on every list that can go stale** | Both, 🟠: refresh exists on exactly one screen each, at thresholds differing >2×. Android must stop bouncing where it will not refresh; both must extend the gesture past the status dashboard. |
 
 ---
 
@@ -281,7 +282,7 @@ use it as the reference when standardising elsewhere.
 | --- | --- | --- | --- | --- |
 | SSO authorization sheet | v-padding 12, radius 12, @ 0.15, bold, brand text, grey @ 0.1 disabled | identical | **identical** | none ✅ — the reference implementation for buttons |
 | Authorized apps list | identical | identical | **identical** | none ✅ |
-| Login scrim | 0.5 | 0.5 | **0.5** | matches ✅ |
+| Login scrim | **0.3** — `Color.black.opacity(0.3)`, `LoginView.swift:16` | **0.75** — `Color.ham_black.copy(alpha = 0.75f)`, `LoginView.kt:143` | **0.5** | **both** — 🟠. Previously read as 0.5 / 0.5 "matches"; both values were wrong, and the row that claimed no work was needed was the wrong one. |
 | QR scan reticle | from the Huawei ScanKit AAR | same | **identical** | matches ✅ — not themeable from this repo |
 | QR scan — torch / album | absent | absent | **decide** | Both: consider adding. 🟡 |
 | CAS settings | no credential fields; remote webview + injected JS | same | **identical** | matches ✅ |
@@ -306,15 +307,20 @@ These affect every screen, so they are worth doing first.
 | Toast error colour | `#FF3B30` | `#F44336` | **`feedback.error` #FF3B30** | Android. 🟠 |
 | Toast types | 5 | 3 | **5** | Android: add warning and info. 🟠 |
 | Toast background | adaptive | hardcoded `#EDEEEF` | **adaptive** | Android: use the token. 🟠 |
-| Text field | three ad-hoc helpers | one `HamTextField` | **Android's spec** | iOS: port it (radius 8, border 1px, padding 8, placeholder `text.tertiary`, caret `accent`). 🟠 |
+| Text field | **no shared component in use** — `TextEdit.swift:11` has **0** call sites, 14 hand-built `TextField(` | one `HamTextField`, **no error slot**, bypassed by the flagship schedule editor (`InsertEditHomeView.kt:146-165`) | **Android's spec, plus an error slot** | iOS: port it (radius 8, border 1px, padding 8, placeholder `text.tertiary`, caret `accent`) and add a persistent accessibility label, since an Android hint disappears when the field has text. Android: add the error slot and stop bypassing it. 🟠 |
 | Segmented picker | native | custom, thumb r5 ≠ track r6 | **thumb radius = track radius** | Android: fix. 🟠 |
-| Divider colour | system, no token | `surface.tertiary` | **`surface.tertiary`** | iOS: add a token. 🟡 |
+| Divider colour | system, no token, **76 raw `Divider()` and no component at all** | `surface.tertiary`, shared `HamDivider` at **66** sites (`Divider.kt:17-24`) | **`surface.tertiary`, one component per platform** | iOS: add the token *and* the component — 76 unowned call sites is 76 chances to drift. 🟠 |
 | Divider vertical padding | 4 (varies 0/4/8/10/12) | same spread | **4** | Both: collapse outliers. 🟡 |
 | Empty state | inline text in a card | bare full-screen column | **one component** | Both: build one. 🟠 |
 | Error / success views | Lottie + icon + text | Lottie + icon + text, different colours | **one set** | Align: success icon should be green on Android (currently blue). 🟠 |
 | Loading view | ad-hoc per screen | ad-hoc per screen | **one component** | Both: build one. 🟠 |
 | Card | padding 16, radius 16 | identical | **identical** | none ✅ |
 | Card header → body gap | 8 | 8 | **8** | matches ✅ — the one spacing value both platforms agree on |
+| **Search debounce** | **none — a gRPC call per keystroke** (`CourseScoreSearchViewSearchBar.swift:33-35`) | none needed — fetches on submit only (`CourseScoreSearchViewModel.kt:151-165`) | **300 ms debounce, or submit-only** | iOS: debounce. Either way, no request per character. 🟠 |
+| **Score-result filter gate** | ships to everyone | behind A/B flag `enableCourseScoreResultFilter` (`CourseScoreSearchViewModel.kt:89-92`) | **ships to everyone or to no one** | Android: resolve the flag; an affordance behind an experiment is not a design decision. 🟠 |
+| **Paging footer** | `searchResultLoadState` computed, **never rendered** (`CourseScoreResultViewBody.swift:22-41`) | same — computed, never rendered (`CourseScoreResultView.kt:221-227`) | **trailing loading row + end-of-list marker** | Both: render what you already compute. iOS already does this correctly for want/comment history. 🟠 |
+| **Result count** | never, even in nav titles (`CourseCenterSelfWantPageView.swift:68`) | in the nav title for want/rank (`想上历史(%1$d)`) and a filtered seat count in library | **show it on any filtered or searched list** | iOS: add; both: add it to the score result, the list that needs it most. 🟡 |
+| **Logout confirmation** | **none**, 2 entry points | **none**, 3 entry points | **confirm** — a platform-native alert, cancel + action | Both: add. 11 of 13 destructive actions are also unconfirmed; see `design-system.md` §4.6. 🔴 |
 
 ---
 
@@ -354,6 +360,10 @@ Divergences that repeat across many screens. Fixing these once closes dozens of 
 | 9 | **Secondary-text colour** | adaptive | hardcoded `Gray`, no dark variant | every screen | **adaptive `text.secondary`** |
 | 10 | **Module brand vs accent** | raw `Color.blue`/`.green` at call sites | tokens, but two resolve wrong | ~10 | Use `accent` for interactive, `brand.*` only in the three identity places |
 | 11 | **Icon *metaphor*** | court / grid / filled-circle | ball / school / bare glyph | see `design-system.md` §2.8 | 5 of 8 function-grid keys, 1 of 3 tab icons, 4 of 6 status-card headers agree today. Sizes are already specified — the **glyph** is not |
+| 12 | **Lazy vs eager lists** | `ScrollView { VStack }` by default; lazy only for the schedule list and 2 `List`s needing `swipeActions` | `LazyColumn` (17 sites) for the score and schedule lists | ~10 | **lazy above ~30 items** — iOS's score, library, sport and status columns are all eager today |
+| 13 | **Function-launcher grid** | horizontal `ScrollView` of hand-laid `HStack` rows (`MyViewFunctionCard.swift:49-67`) | `LazyHorizontalStaggeredGrid` (`MyViewFunctionComponentView.kt:203-214`) | 1, but config-driven | **the real grid on both** — same cloud config, one of the two is a reimplementation |
+| 14 | **Schedule row gap** | 12 | 16 | 1 | **12** |
+| 15 | **Result count on a filtered list** | never | nav title for want/rank, filtered seat count in library | 3 | **show it** |
 
 Item 10 is the root cause of several rows above: iOS writes `Color.blue` literally in the library
 module and `Color.green` in the sport module, bypassing the tokens.
@@ -378,7 +388,7 @@ is a value that must be written down for the first time on at least one platform
 | **Button press** | none | **whole button dims to alpha 0.25** — `Button.kt:48` | native press treatment | Android delete the dim |
 | **Loading → content** | **hard swap** at 51 `ProgressView` sites | crossfade, spec almost never given | **300 ms crossfade** | iOS add; Android pin the spec |
 | **List item insert / remove** | none | `.animateItem()` in one file | **150 ms both** | iOS add |
-| **Pull-to-refresh** | **none** — 0 uses of `.refreshable` | one screen — `StatusContainerView.kt:157` | needs a product decision | §12 of `logic-parity.md` |
+| **Pull-to-refresh** | hand-rolled, one screen, **128 pt** threshold — `StatusUpdateView.swift:15,57-63`; **0** `.refreshable` | native, one screen, **300 px** — `StatusContainerView.kt:157`; **+56 `BounceScrollView`** no-ops | **on every stale-able list**, one threshold, ~64 dp | Both — see §4.7 |
 | **`.fade` transition** | pod's **asymmetric** fade at 13 sites — fade in, cut out | n/a | first-party symmetric `AnyTransition.fade` | iOS — this is the highest-severity motion defect |
 | **Reduced motion** | not honoured | not honoured | **honour on both** | both |
 
@@ -423,7 +433,7 @@ so unlike most of this document these are not divergences — they are shared ga
 | **Retry mislabelled as a dismissal** | course center: `ErrorView(title: 请求失败) { vm.doRequest() }` under the default **返回** | print: same shape under the default **完成** | pass the label — a one-argument fix each |
 | **Booking seat-list failure** | **backs out only** — `LibraryBookErrorView.swift:22-25` | **retries** — `library_retry` → `vm.fetchSeatList()`, `LibraryBookView.kt:134-141` | iOS add the retry; this is the sharpest single divergence in the module |
 | **Error vs empty** | fall through to an empty list — identical pixels | `when (loadState) { … else -> {} }` — identical pixels | distinguish them on both |
-| Pull-to-refresh | hand-rolled overscroll, `StatusUpdateView.swift:57-63` — **0** `.refreshable` | one screen, `StatusContainerView.kt:157` | behaviour exists on iOS; migrate it to `.refreshable` and extend Android |
+| Pull-to-refresh | hand-rolled overscroll, **128 pt**, `StatusUpdateView.swift:15,57-63` — **0** `.refreshable` | native, **300 px**, `StatusContainerView.kt:157`; **+56 `BounceScrollView`** no-ops | refresh exists on one screen each at thresholds >2× apart; migrate iOS to `.refreshable`, fix Android's threshold, and make the 56 bouncing screens refresh or stop bouncing |
 
 The Android error text 网络异常，请稍后重试 (`ToastManager.kt:247`) promises a retry the UI does
 not offer. It is shown at ~70 call sites against 13 `ErrorView` sites — the dominant pattern.
@@ -449,3 +459,24 @@ Do not re-audit these.
 | Term/semester mapping, GPA table, both F2 formulas | identical (logic, `logic-parity.md` §11) |
 | Search, course matching, ranking | identical (server-side) |
 | Card elevation — none on either platform | identical (both flat) |
+| Settings rows separated by a divider; cards separated by spacing | identical (both) |
+| Validation timing — on submit only | identical (both) |
+| Required fields — never marked | identical (both, and wrong on both) |
+| Cursor pagination triggered at the second-to-last item | identical (both) |
+| The 5-or-7 × 13 timetable grid, hand-offset rather than lazy | identical (both) |
+
+---
+
+## 19. Patterns
+
+Five behaviours that cut across every screen. The rules are in `design-system.md`
+[§4.5](design-system.md#45-forms-and-text-entry)–[§4.9](design-system.md#49-lists-grids-and-card-columns);
+this is the verdict per pattern.
+
+| Pattern | Do the platforms agree? | Divergences to close |
+| --- | --- | --- |
+| **Forms** ([§4.5](design-system.md#45-forms-and-text-entry)) | **yes** on every measured axis — placeholder-only fields, label rows with a chevron, submit-only validation, toast errors, no required marking, no keyboard type | The bug is *shared*: iOS has **no field component** (`TextEdit` 0 call sites), Android's `HamTextField` has **no error slot** and is bypassed by the flagship editor, and **within each app** two submit placements ship. Both sides move. |
+| **Confirmation** ([§4.6](design-system.md#46-confirmation-and-destructive-actions)) | **yes** — 11 of 13 destructive actions unconfirmed on both, logout unconfirmed on both, the same one action confirmed on both | None to align; **both** sides must *add* confirmations. The largest single gap in either client. |
+| **Data loading** ([§4.7](design-system.md#47-data-loading-and-caching)) | **mostly** — course/score/schedule local-first on both; library/sport network-first on both | The **status dashboard**: iOS shows a persisted snapshot immediately, Android starts empty. Plus pull-to-refresh — one screen each at 128 pt vs 300 px, and 56 Android screens that bounce without refreshing. |
+| **Search, filter, sort, pagination** ([§4.8](design-system.md#48-search-filter-sort-pagination)) | **yes** on the model — the same three descending-only chips, cursor paging at the second-to-last item, no footer, no count | iOS requests **per keystroke**; Android gates the filter behind an A/B flag; comment page size differs (server vs 20); Android shows counts in nav titles, iOS never does. |
+| **Lists, grids, card columns** ([§4.9](design-system.md#49-lists-grids-and-card-columns)) | **yes** on nearly every container — scrolling card column, bespoke timetable grid, lazy for the two long lists | iOS's score screen is eager where Android's is lazy; the function launcher is hand-laid on iOS and a real grid on Android; 76 raw iOS `Divider()` vs one Android component; schedule row gap 12 vs 16. |
