@@ -3573,7 +3573,7 @@ ALERT 取消授权 / 确定要取消对该应用的授权吗？ / 取消 / 取�
 **Strings:** 授权应用 (`user_center_authorized_apps`, zh-Hans `:918`) · 暂无授权应用 (`:919`) · 取消授权 (`:920`) · 确定要取消对该应用的授权吗？ (`:921`) · 已取消授权 (`:922`) · 授权于 %@ (`:923`) · 取消 (`sso_auth_cancel`, `:905`) · hardcoded: `app.badge.checkmark`, `app.fill` (`:50,185`), `sso_authPreferences` (`SSOAuthPreferenceManager.swift:25`).
 **States:** `first load` — centred spinner `:62-69` · `loaded with apps` — rows + dividers · `loaded, zero apps` — empty view `:47-60` · `loading next page` — footer spinner, rows stay, sentinel suppressed `:88,96-103` · `error` — `.loadedWithError` matches no branch → blank canvas when empty, frozen rows otherwise; toast only `:19,21` · `revoking` — pill → spinner, second revoke blocked at the VM (`AuthorizedAppsViewModel.swift:57`) · `revoked` — row removed, `total` decremented, prefs cleared, success toast `:70-76`.
 
-### Scan code (扫一扫) — platforms: iOS
+### Scan code (扫一扫) — platforms: both — **canonical**
 **Purpose:** Full-screen ScanKit camera scanner for QR-login tickets (`ham://qrcode-login?ticket=…`) and course palette sharing; the app owns only a hint caption and a decorative sweep — mask, window and reticle are SDK-drawn.
 **Layout:**
 ```text
@@ -3593,7 +3593,7 @@ ALERT 取消授权 / 确定要取消对该应用的授权吗？ / 取消 / 取�
 **Strings:** 扫描登录二维码 (`Localizable.strings:665`) · 扫描配色分享二维码 (`:666`) · 相机权限未开启 (`:418`) · 请前往“设置”开启 (`:419`, full-width quotes U+201C/201D) · 扫码登录 (`:668`, entry row) · 是否允许Ham访问你的相机，以启用扫一扫功能 (`Ham/iOS/Info.plist:108`) · zero CJK literals in `ScanCodeView.swift`.
 **States:** `authorized` — preview + caption + looping sweep · `denied/restricted` — toast then return; camera stays black, sweep keeps animating, no retry (`ScanCodeViewModel.swift:46-54`) · `scan success (ham://)` — deep link → `DeepLinkManager` → `.qrCodeLogin(ticket:)`; duplicate pushes suppressed by `router.path.last != route` (`MainDeeplinkView.swift:18`) · `scan success (other)` — `.ham_onReceiveQrCode` with `userInfo["id"]`/`["text"]`; only `CourseSettingThemeView.swift:91-99` listens · `result dropped` — payloads without a `ResultPoint` array discarded silently (`ScanCodeView.swift:66-68`).
 
-### QR code login (二维码登录) — platforms: iOS
+### QR code login (二维码登录) — platforms: both — user-center entry
 **Purpose:** Confirmation surface for a scanned desktop login QR: fetch the server message for the ticket, show it under a computer icon, and offer 确认登录 when the server state is `requestConfirm`.
 **Layout:**
 ```text
@@ -4069,7 +4069,7 @@ Two stacked gates: the server flag `can_auto_authorize` and the client preferenc
 
 **Divergence:** iOS has no scroll-progress source (a one-way latch), no `WaitingForLogin`, and dismisses silently when not signed in; Android has no visible drag handle on any sheet and uses #4CAF50 rather than `feedback.success`. Adopt Android's scroll computation + login gate and iOS's detent-free defaults are to be replaced by the 85 % detent in both.
 
-### QR code login (二维码登录) — platforms: both
+### QR code login (二维码登录) — platforms: both — auth-module slice, canonical for Android values
 
 **Purpose:** the confirmation surface the phone shows after the user scans a desktop QR code.
 
@@ -4105,13 +4105,13 @@ Two stacked gates: the server flag `can_auto_authorize` and the client preferenc
 
 **Divergence:** iOS values are unmeasured in this audit range — the Android shape above is normative pending an iOS pass. The expired-ticket state ships no UI on Android and must be added.
 
-### Scan code (扫一扫) — platforms: both
+### Scan code (扫一扫) — platforms: both — **duplicate, to merge into the canonical section above**
 
-**Purpose:** the in-app camera scanner whose `ham://` results route to QR login, SSO authorize or a deep link.
+> **Duplicate.** This is a second, un-audited scan section produced by the auth-module slice.
+> The measured values live in the canonical section above; this one is kept only for its
+> Android result-dispatch detail, which the canonical section does not have. Merge and delete.
 
 **Blocks / anatomy:** `camera preview` — full-bleed · `scan frame` — centred reticle · `result dispatch` — Android forwards every `ham://` scan as `OnReceivedDeepLink` (`QrCodeScanToLoginHandler.kt:16-25`), then `DeepLinkHandler` maps host → route (`DeepLinkHandler.kt:20-24,55-59`); routes `qrcode/scan` (`QrCodeViewRoute.kt:10-13`) and `scanCode` (iOS, `Route.swift:96`).
-
-**GAP — not audited.** The audit range ends at `usercenter.md:8542` with CAS settings: **no scan section exists in the source notes and no iOS or Android value was measured.** Normative requirements that need no measurement: preview full-bleed behind a 42 + inset nav bar titled 扫一扫; reticle and controls at the 44 minimum target (§3.4); `text.primary` chrome; a permission-denied state with copy and a 去设置 action; torch and album as `icon.md` 24 icon buttons.
 
 ### Cross-screen defects (auth stack)
 
@@ -4828,8 +4828,10 @@ parity would mean an Android in-app share row.
 
 ## Appendix — audit sections outside this spec
 
-Standalone screens in `/tmp/audit/shared.md` not named in this file's brief. **Not spec'd here**; each needs its
-own section or another agent's slice.
+**Corrected 2026-09-24.** This appendix said all of the below were "not spec'd here". Most are
+now spec'd in this file — Scan and QR login are each spec'd **twice**, which is worse than not
+at all. The table now records where each one actually lives. The two duplicates are marked
+in-place and need merging; the rest are done.
 
 | § | Screen | Platforms | Note |
 |---|---|---|---|
