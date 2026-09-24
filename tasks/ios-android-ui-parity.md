@@ -256,10 +256,22 @@ Cross-repo by nature — needs a decision from both maintainers before any code 
 
 Found during the survey, not part of the token alignment:
 
-- **Print UI is Android-only.** iOS ships `Ham/shared/business/print/` (PrintApi,
-  PrintCasClient, PrintRequestHelper, PrintService) compiled into the target but referenced by
-  nothing — no route, no strings, no view. Android has a full flow against the same
-  `print.lib.whu.edu.cn` backend. iOS needs UI only; the data layer is done.
+- ~~**Print UI is Android-only.**~~ **Corrected: print is on both.** The earlier survey was
+  wrong. iOS has `Route.swift:33-34` (`.libraryPrint`, `.printPrepare`) wired to
+  `LibraryPrintView` and `PrintPrepareRouteView`, plus `PrintPrepareView.swift` and
+  `PrintFileSourcePicker.swift` — routes *and* views, not just the data layer. The remaining
+  print work is numeric, not a build-out: the library print card's arrow is `12` on iOS and
+  `20.dp` on Android, and the share-hint copy differs. See `screens.md` §12.
+- **Motion is unspecified on both platforms.** Neither client has a duration scale, and 352 iOS
+  `withAnimation {}` sites plus ~91 Android `animate*AsState` sites specify no duration at all,
+  so they inherit different platform defaults. Specified in `design-system.md` §2.9; the work
+  list is `ui-parity.md` §15.
+- **Accessibility is absent on both platforms**, failing in the same direction rather than
+  diverging — so it is a shared build-out, not a parity fix. iOS has 2 labelled icons of 236 and
+  Android 7 of 283. `design-system.md` §2.10, work list `ui-parity.md` §16.
+- **Loading, empty, error, offline and session-expired states are unrendered** on both. Neither
+  shared error component offers a retry, and neither app can tell the user it is offline.
+  `design-system.md` §3.10, work list `ui-parity.md` §17.
 - **Sport status card is iOS-only.** `Ham/iOS/ui/status/card/sport/StatusSportCardView.swift`
   has no Android counterpart; `StatusViewCardType` (`StatusViewCardScoreManager.kt`) lists no
   `Sport`. Android's `ScheduleCard.kt` also exists but has zero call sites.

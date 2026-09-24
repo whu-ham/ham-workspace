@@ -50,18 +50,18 @@ in [`design-system.md`](design-system.md) §2:
 
 ## Contents
 
-1. [Status dashboard (状态 Status)](#1-status-dashboard) — 10 screens
-2. [Course timetable (课程表 Course)](#2-course-timetable) — 7 screens
-3. [Schedule (日程 Schedule)](#3-schedule) — 5 screens
-4. [Library (图书馆 Library)](#4-library) — 12 screens
-5. [Sport (运动 Sport)](#5-sport) — 13 screens
-6. [Score (成绩 Score)](#6-score) — 12 screens
-7. [CourseScore (课程评分 CourseScore)](#7-coursescore) — 8 screens
-8. [My tab (我的 My)](#8-my-tab) — 10 screens
-9. [User center (用户中心)](#9-user-center) — 21 screens
-10. [Auth and sign-in (登录与授权)](#10-auth-and-sign-in) — 8 screens
-11. [Shared components (共享组件)](#11-shared-components) — 15 screens
-12. [Standalone screens (独立页面)](#12-standalone-screens) — 8 screens
+1. [Status dashboard (状态 Status)](#1-status-dashboard-状态-status) — 10 screens
+2. [Course timetable (课程表 Course)](#2-course-timetable-课程表-course) — 7 screens
+3. [Schedule (日程 Schedule)](#3-schedule-日程-schedule) — 5 screens
+4. [Library (图书馆 Library)](#4-library-图书馆-library) — 12 screens
+5. [Sport (运动 Sport)](#5-sport-运动-sport) — 13 screens
+6. [Score (成绩 Score)](#6-score-成绩-score) — 12 screens
+7. [CourseScore (课程评分 CourseScore)](#7-coursescore-课程评分-coursescore) — 8 screens
+8. [My tab (我的 My)](#8-my-tab-我的-my) — 10 screens
+9. [User center (用户中心)](#9-user-center-用户中心) — 21 screens
+10. [Auth and sign-in (登录与授权)](#10-auth-and-sign-in-登录与授权) — 8 screens
+11. [Shared components (共享组件)](#11-shared-components-共享组件) — 15 screens
+12. [Standalone screens (独立页面)](#12-standalone-screens-独立页面) — 8 screens
 
 ---
 
@@ -1103,14 +1103,14 @@ every drag and shows none.
 │  │  │  (full)  ├─────────────────────┤     │││
 │  │  │          │ 设置          (67)   │     │││
 │  │  └──────────┴─────────────────────┘     │││
-│  ┌ G print card (Android)                  ─┐│
+│  ┌ G print card (both)                      ─┐│
 │  bottom spacer 128                          │
 └──────────────────────────────────────────────┘
 ```
 **Blocks:** 1 **Banner carousel** — announcement cell + N remote pages, always; page `-1` → Board (`LibraryMainView.swift:17`, `LibraryMainView.kt:54-58`). 2 **Retry-login** — `if needRetryLogin` (`:19`, `:61-65`), tap → `fastLogin()`. 3 **Analytics card** — always mounted (`:30`, `:60`), self-hides unless
 `enableLibraryAnalytics && permitted != false` (`AnalyticsCardView.swift:18`). 4 **Booking cards** — one per booking in `RESERVE/CHECK_IN/AWAY` (`:32-35`, `:46-52`); expansion = 4 rows of `icon + Text`, icon frame `20`/`24.dp`: `刷新` · `在地图打开` · `添加到系统日历` · `变更或取消预约`, footer `展开`/`收起` +
 chevron rotated `-90°` (`CurrentBookingCard.swift:37-136`, `ReservedCard.kt:78-140`). 5 **Divider + 16** — only when 4 is non-empty (`:36`, `:75-77`). 6 **Quick book** — iOS when a starred or last-booking seat exists (`:39`); Android when a seat is selected (`LibraryMainViewQuickBookCard.kt:63`). 7 **Function
-grid** — always (`:43`, `:81`). 8 **Print card** — always, `spacedBy 8` (`:80-82`). 9 **Spacer** `128` (`:47`).
+grid** — always (`:43`, `:81`). 8 **Print card** — always on both; iOS `LibraryMainViewPrintFunctionCard()` at `LibraryMainView.swift:45`, Android `spacedBy 8` (`LibraryMainView.kt:80-82`). 9 **Spacer** `128` (`:47`).
 
 **Status.** Colours: `reserve` blue, `checkIn`/`stop` green, `away` orange, `miss`/`leaveEarly` red, else gray (`LibraryModel.swift:57-70`); Android home `RESERVE→ham_blue`, `AWAY→ham_orange`, `CHECK_IN→ham_green`,
 else secondary (`ReservedCard.kt:49-56`), history adds `MISS→ham_red` (`LibraryHistoryView.kt:62-67`). Names, 8, identical on both: `预约 / 履约中 / 暂离 / 已结束 / 已取消 / 失约 / 早退 / 未签退` (`LibraryModel.swift:47-56`, `BookingVO.kt:26-35`).
@@ -1123,7 +1123,7 @@ else secondary (`ReservedCard.kt:49-56`), history adds `MISS→ham_red` (`Librar
 | tip · watermark · carousel | `.red` `lineLimit(3)` — `:98-99` · `book.fill` 36 @0.25, 6×9 — `:108-117` · `PageTabViewStyle` 5 s — `:81,:186` | none · `Book` 72 @0.2, 5×10 — `:55-71` · single page — `:44` | red, 3 lines · 36 @0.25 tiled · pager, 5 s |
 | strip pad · strip text · seat no. · loc/time | h16 v8 — `CurrentBookingCard.swift:24-25` · `.bold`, fg b2 — `:21-23` · `.title.bold()` 28 — `:30` · `.caption` 12 — `:35` | h16 v12 — `ReservedCard.kt:70` · `bodyBold` white — `:65-66` · `title` 24 — `:74` · `caption` 12 — `:75-76` | h 16 v 8 · bold 16, white · 28 · 12 |
 | grid h · gap · r · room icon · room fill | `150` — `FunctionButtonView.swift:132` · `8` — `:14` · `16` — `:43` · `chair.lounge.fill` 64 — `:21` · `blue@0.13` — `:44-46` | `142.dp` — `FunctionCard.kt:54` · `8.dp` · `16.dp` — `:79` · `Chair` 64 — `:87` · `blue@0.15f` — `:80` | 150 · 8 · 16 · 64 · blue @0.15 |
-| right fill · right icon · right pad · print cell | `gray@0.1` — `:77` · 32 @0.75 — `:81-82` · `16` — `:74` · none | `ham_gray@0.1f` — `:129` · 32 @0.75f — `:137-138` · `8.dp` — `:130` · `blue@0.15f`, r 16, pad 12, icon 48 @0.75f — `PrintFunctionCard.kt:50-51,:76-78` | `gray@0.1` · 32 @0.75 · 8 · as Android |
+| right fill · right icon · right pad · print cell | `gray@0.1` — `:77` · 32 @0.75 — `:81-82` · `16` — `:74` · `ham_brand_library_tint`, r 16, pad 12, icon `printer` 48 @0.75, title `.body.bold` + `arrowtriangle.right.fill` **12** — `LibraryMainViewPrintFunctionCard.swift:14-45` | `ham_gray@0.1f` — `:129` · 32 @0.75f — `:137-138` · `8.dp` — `:130` · `blue@0.15f`, r 16, pad 12, icon 48 @0.75f, arrow `ArrowRight` **20.dp** — `PrintFunctionCard.kt:50-51,:62-64,:76-78` | `gray@0.1` · 32 @0.75 · 8 · as Android, arrow `icon.xs` 12 |
 | qb seat no. · badge · reserve button | `.title.bold()` 28 — `QuickBookCard.swift:23` · `收藏座位` orange / `上次预约` green, `.caption`, pad 4, r 5 — `:26-31,:35-40` · r 10, `blue@0.1`, `.padding()` — `:116-117` | `32.sp` — `LibraryMainViewQuickBookCard.kt:74` · none · 48, r 12, `blue@0.25f` — `:119-123` | 28 · caption, white, pad 4, r 5 · 48, r 12, blue @0.25 |
 | analytics bar · % · retry banner | 2×30, gap 1, r 1 — `AnalyticsCardView.swift:94-97` · default — `:137` · red, r 16, icon 128 @0.25 — `LibraryRetryLoginView.swift:33-37` | 2×20 — `…AnalyticsCard.kt:196-201` · `title2` 20 — `:167-169` · `ham_red`, r 16, icon 60 @0.15f — `…kt:75-77` | 2×30 · 20sp · `#FF3B30`, r 16 |
 **Strings:** `图书馆` · `图书馆公告` · `查看房间` · `查看空余的座位预约` · `历史预约` · `你的历史预约记录` · `设置` · `图书馆预约选项` · `刷新` · `在地图打开` · `添加到系统日历` · `变更或取消预约` · `展开`/`收起` · `收藏座位` · `上次预约` · `预约` · `今天`/`明天` · `数据统计` · `不同意`/`同意` · `请求成功率` · `昨天%@` · `登录信息过期` · `点击重新登录` · `打印` · `在图书馆公共打印机打印`.
@@ -1134,7 +1134,7 @@ else secondary (`ReservedCard.kt:49-56`), history adds `MISS→ham_red` (`Librar
 | Loading / empty | No spinner on either platform — iOS `currentBookingLoadState` is write-only (`LibraryMainViewModel.swift:59,66,77`); Android's retry banner has its own spinner (`LibraryRetryLoginView.kt:81`). Empty omits blocks 4–6 with no copy. |
 | Error / token expired | Non-token errors toast only (`LibraryMainViewModel.swift:71`, `…kt:137-141`). Expired tokens set `needRetryLogin` (`:68`, `…kt:143`) → red banner; tap re-runs `fastLogin()`. |
 | Not logged in / consent | iOS sheets the intro and pops 0.3 s after dismissal (`LibraryViewModel.swift:28-34`); Android sheets after 500 ms and composes home only when `userId.isNotEmpty()` (`LibraryView.kt:42-53`). iOS shows the consent card; on Android the branch is unreachable — `canUse` is a non-null `Boolean` (`LibraryMainViewAnalyticsCard.kt:55,61`). |
-**Divergence:** iOS banner is a 5 s pager with remote banners, Android a single static page; grid 150 vs 142 and iOS has no print entry; quick-book keys off seat *existence* vs *selection*; Android's `在地图打开`
+**Divergence:** iOS banner is a 5 s pager with remote banners, Android a single static page; grid 150 vs 142 and the print card's arrow is 12 vs `20.dp`; quick-book keys off seat *existence* vs *selection*; Android's `在地图打开`
 is a dead `{}` (`ReservedCard.kt:91`), iOS has no `添加到系统日历`; consent works only on iOS; retry copy is fail-class-specific only on Android.
 
 ---
@@ -1403,26 +1403,39 @@ Android disables `确定` (`:196,:203-206`). Overlapping entry — Android only,
 
 ---
 
-### 12. Print (打印) — platforms: Android only
+### 12. Print (打印) — platforms: both
 **Purpose:** Pick a file to send to a library printer, and list available print stations.
-**Entry:** Home print card → `library/print` (`PrintFunctionCard.kt:46`).
-**Layout:** nav `打印` → h pad `16` → spacer `16` → drop zone `168` high, r `16`, `blue@0.15f`, centred `＋` `72` + `添加文件` → share hint (`caption`, pad v `8`) → spacer `36` → `打印机位置` `bodyBold` → spacer `8` → `AnimatedContent`: spinner + `加载中`, `加载异常`, or a `LazyColumn` (gap `8`, pad bottom `16`) of rows
-r `16`, `gray@0.15`, pad `16`: `🖨48` + name (2 lines) + status (3 lines); empty adds a trailing `没有找到打印机`.
-**Blocks:** 1 **Drop zone** → `ActivityResultContracts.OpenDocument()` MIME `*/*` (`:64,:83`); the URI is bundled into `savedStateHandle` and the app navigates to `PrintRoutePath.MAIN` (`:66-73`). 2 **Share hint** (`:101-104`). 3 **Section header** (`:107`). 4 **Printer list** (`:134-152`).
+**Entry:** Home print card → iOS `Route.libraryPrint` (`Route.swift:33`, composed at `:231`); Android `LibraryRoutePath.PRINT` (`PrintFunctionCard.kt:46`).
+**Layout:** nav `打印` → h pad `16` → spacer `16` → drop zone `168` high, r `16`, tint, centred `＋` `72` + `添加文件` → share hint (`caption`, pad v `8`) → spacer `36` → `打印机位置` `bodyBold` → spacer `8` →
+state switch: spinner + `加载中`, `加载异常`, or a list (gap `8`, pad bottom `16`) of rows r `16`, `gray@0.15`, pad `16`: `🖨48` + name (2 lines) + status (3 lines); empty shows `没有找到打印机`.
+**Blocks:** 1 **Drop zone** → iOS `.printFileSourcePicker` (`:49-51`), an action sheet `添加文件` offering `照片图库` · `文件` · `取消` (`PrintFileSourcePicker.swift:59-68`) then `.fileImporter` (`:70`); then `router.push(.printPrepare(url:name:))` (`LibraryPrintView.swift:50`). Android
+`ActivityResultContracts.OpenDocument()` MIME `*/*` (`LibraryPrintView.kt:64,:83`); the URI is bundled into `savedStateHandle` and the app navigates to `PrintRoutePath.MAIN` (`:66-73`). 2 **Share hint** (`LibraryPrintView.swift:27-30`; `LibraryPrintView.kt:101-104`). 3 **Section header** (`LibraryPrintView.swift:34-37`; `LibraryPrintView.kt:107`).
+4 **Printer list** (`LibraryPrintView.swift:78-137`; `LibraryPrintView.kt:134-152`).
 **Values:**
 
-| Element | Value | Source |
-|---|---|---|
-| padding · top spacer · drop zone | h `16.dp` · `16.dp` · `168.dp`, r `16.dp`, `ham_blue @0.15f`, centred | `:80`, `:81`, `:85-90` |
-| add icon · label · share hint | `Add` `72.dp`, `ham_blue` · `body` 16sp, `ham_blue` · `caption` 12sp, secondary, pad v `8.dp` | `:92-95`, `:96`, `:101-104` |
-| header spacers · header | `36.dp` before, `8.dp` after · `bodyBold` 16sp | `:106-108` |
-| loading row · transition | `Row(spacedBy 2.dp)` = spinner + `body` · `AnimatedContent` | `:111-118`, `:109` |
-| printer row · icon | r `16.dp`, `ham_gray @0.15f`, `padding(16.dp)`, gap `8.dp` · `Print` `48.dp`, `ham_gray` | `:128-133`, `:134-137` |
-| name / status · list | `bodyBold` 2 lines / `caption` 3 lines, ellipsis · gap `8.dp`, pad bottom `16.dp` | `:139-152`, `:125-126` |
-**Strings:** `打印` · `添加文件` · `或者，通过其他APP（例如QQ/微信）分享文件到Ham中打印` · `打印机位置` · `加载中` · `加载异常` · `没有找到打印机` · `在图书馆公共打印机打印`.
-**States:** `Unload` renders nothing below the header (`:168`). Loading → spinner row. Loaded → list, plus a trailing `没有找到打印机` item when empty (`:157-165`). Load error → `加载异常` only; the captured
-`printerListErrorMessage` (`LibraryPrintViewModel.kt:28`) is never surfaced. File picked → `PrintRoutePath.MAIN` (`:64-74`); cancelled → unchanged. `SideEffect { vm.updatePrinterList() }` re-fires the network call on every recomposition (`:60-62`).
-**Divergence:** Android-only; iOS has no print entry point and no print strings.
+| Element | iOS | Android | normative |
+|---|---|---|---|
+| page bg · padding · top spacer | `ham_bg_b1Color` — `LibraryPrintView.swift:47` · `16` — `:45` · `16` — `:23` | `ham_bg_b1` — `LibraryPrintView.kt` · `16.dp` — `:80` · `16.dp` — `:81` | `#F9F9F9` · 16 · 16 |
+| nav title | `打印` — `:48` | `打印` — `:107` | `打印` |
+| drop zone h · r · tint | `168` — `:69` · `16` — `:71` · `ham_brand_library_tint` — `:72` | `168.dp` · `16.dp` · `ham_blue @0.15f` — `:85-90` | 168 · 16 · `#007AFF` @0.15 |
+| add icon · stack gap · label | `plus` `72` — `:62-63` · `VStack(spacing: 8)` — `:61` · `.body` — `:64` | `Add` `72.dp` — `:92-95` · centred — `:85-90` · `body` 16sp — `:96` | 72 · 8 · 16 |
+| share hint · hint pad | `.caption` `.secondary` — `:27-29` · v `8` — `:30` | `caption` 12sp, secondary — `:101-104` · v `8.dp` | 12 · v 8 |
+| header spacers · header | `36` before — `:32`, `8` after — `:39` · `.body.bold` — `:34-36` | `36.dp` before, `8.dp` after — `:106-108` · `bodyBold` 16sp | 36 · 8 · 16 bold |
+| loading row | `HStack(spacing: 2)` = `ProgressView` + `.body` — `:83-89` | `Row(spacedBy 2.dp)` = spinner + `body` — `:111-118` | shared labelled spinner: 20 / 2, `body` 17, gap `space.3` **8** ([§11](#11-shared-components-共享组件)) — both ship gap 2 |
+| printer row · icon | `padding(16)`, r `16`, `Color.gray @0.15` — `:131,:134-136` · `printer` `48`, `Color.gray` — `:113-115` | `padding(16.dp)`, r `16.dp`, `ham_gray @0.15f` — `:128-133` · `Print` `48.dp`, `ham_gray` — `:134-137` | pad 16 · r 16 · gray @0.15 · 48 |
+| name / status · row gap | `.body.bold` `lineLimit(2)` / `.caption` `lineLimit(3)` — `:118-126` · `spacing: 8` — `:112` | `bodyBold` 2 lines / `caption` 3 lines, ellipsis — `:139-152` · gap `8.dp` | 16 bold · 12 · 2 / 3 lines · gap 8 |
+| list container · bottom | `VStack(spacing: 8)` — `:102` · spacer `16` — `:43` | `LazyColumn`, gap `8.dp`, pad bottom `16.dp` — `:125-126` | gap 8 · bottom 16 |
+| load trigger | `.task { await vm.updatePrinterList() }` — once — `:52-54` | `SideEffect { vm.updatePrinterList() }` — re-fires on **every recomposition** — `:60-62` | once per appearance |
+**Strings:** iOS `Localizable.strings:811-822` — `打印` · `在图书馆公共打印机打印` · `添加文件` · `或者通过其他应用分享文件到Ham中打印` · `打印机位置` · `加载异常` · `没有找到打印机` · `正在上传` · `上传失败` · `上传成功` · `请到支持的打印机执行作业` · `读取文件失败`. Android `feature/library/…/strings.xml:98-106` —
+`library_print` · `library_print_in_library` · `library_print_tasks` · `library_printer_location` · `library_add_file` · `library_print_share_hint` · `library_no_printer_found`. Both are fully localised; **no string is missing on either side**.
+**States:** `unload`/`Unload` renders nothing below the header (`LibraryPrintView.swift:80-81`; `LibraryPrintView.kt:168`). Loading → spinner + `加载中`. Loaded → list. Empty → iOS replaces the list with `没有找到打印机` (`:97-100`); Android appends it as a trailing list
+item (`:157-165`). Load error → `加载异常` only; the captured `printerListErrorMessage` (`LibraryPrintViewModel.kt:28`) is never surfaced. File picked → iOS pushes `.printPrepare` (`LibraryPrintView.swift:50`), Android navigates to `PrintRoutePath.MAIN` (`LibraryPrintView.kt:64-74`); cancelled → unchanged.
+**Divergence:** the share hint is two different strings — iOS `或者通过其他应用分享文件到Ham中打印`, Android `或者，通过其他APP（例如QQ/微信）分享文件到Ham中打印`. iOS picks the file behind an action sheet (`照片图库` / `文件`), Android opens the document
+picker directly. Empty state: iOS replaces the list, Android appends. Android re-fetches the printer list on every recomposition. Android ships `library_print_tasks` (`打印任务`) for `PrintStatusCard.kt`, which has **zero call sites** — dead code, and no iOS counterpart exists or is needed.
+
+> **Correction.** Earlier revisions of this document, `design-system.md` §8.1, `ui-parity.md` and `logic-parity.md` all stated that print is Android-only and that iOS ships only an unreferenced data layer. That was wrong. iOS has shipped the whole flow since
+> `811c03f6` (2026-09-21): `Route.libraryPrint` and `Route.printPrepare` (`Route.swift:33-34`, composed at `:231,:234`), `LibraryPrintView.swift` (138 lines), `PrintPrepareView.swift` (330 lines), `PrintFileSourcePicker.swift`, `PrintPrepareRouteView.swift`,
+> the `PrintActionExtension` share target, four unit-test files and one E2E suite. The iOS data layer is <ins>not</ins> dead. The two clients are near-identical; what remains is the divergence list above.
 
 ---
 
@@ -2194,7 +2207,7 @@ overlay: full-screen blur when backgrounded (PINNED) — §2e
 **Blocks:** 1 **A Stat card** (`ScoreMainViewMyScoreDataCard.swift`) — `成绩概览` 17/Bold; `GPA %.2f`
 hero 28/Bold; `平均成绩: %.2f` 12 after a 6×6 dot; COND `scoreDataList.count > 0` → divider (v-pad 12,
 maxWidth 200) + `年度成绩` 17/Bold + one row per year (gap 4): year label, dot, `综测成绩: %.6f`,
-`平均成绩: %.2f (GPA%.2f)`. Watermark: crown **128 @ 0.12** bottom-trailing (16,16) clipped
+`平均成绩: %.2f (GPA%.2f)`. Watermark: crown **128 @ 0.15** bottom-trailing (16,16) clipped
 (`DS:767`; today iOS 220 @0.1 offset(60,20) `:76-82`, Android `School` 240 @0.15 `:38-39`).
 2 **B Function card** (`ScoreMainViewFunctionCard.swift`) — three equal tiles, gap 8, h 56, r16,
 `surface.tertiary`, pad 8: **获取成绩**/`更新成绩信息` → update sheet · **选择**/`自选成绩然后统计` →
@@ -2827,7 +2840,7 @@ Five stacked cards · gap 16 · page padding 16 · bottom 32 · `surface.primary
 │├────────────────────────────────────────────┤│
 ││ [全部] │ 2024-1学期  2024-2学期 …        → ││ semester selector
 │└────────────────────────────────────────────┘│
-│┌────────────────────────────────────────────┐│ ② rate card · ★ watermark 128 @0.12
+│┌────────────────────────────────────────────┐│ ② rate card · ★ watermark 128 @0.15
 ││ 评分                                        ││
 ││ ★☆☆☆☆ ▓▓▓▓▓▓▓▓░░░░░░░ 40        4.0       ││ 5 rows × 5 stars · track 144 4/2
 ││ ★★☆☆☆ ▓▓▓▓░░░░░░░░░░ 12        平均       ││
@@ -2892,7 +2905,7 @@ Five stacked cards · gap 16 · page padding 16 · bottom 32 · `surface.primary
 | Element | iOS | Android | Normative |
 | --- | --- | --- | --- |
 | Title | `评分` 17 / Bold `:17` | `course_score_rating_title` `:43` | `评分` 17 / Bold |
-| Watermark | `star.fill` 128, gray@0.1, offset (24,24) `:19-23` | `Star` **172.dp**, gray@0.1, offsetY 24 `:45-47` | `icon.watermark` **128 @0.12**, bottom-trailing (16,16), clipped |
+| Watermark | `star.fill` 128, gray@0.1, offset (24,24) `:19-23` | `Star` **172.dp**, gray@0.1, offsetY 24 `:45-47` | `icon.watermark` **128 @0.15**, bottom-trailing (16,16), clipped |
 | Star rows / glyphs | `ForEach(1..<6)` always 5 `:33` | `repeat(maxStar)` from data `:66,70` | **5 rows × 5 glyphs** |
 | Star size / tint / row gap | `8` `:35` / filled `.gray`, empty gray@0.2 `:36` / `2` `:27` | `10.dp` `:73` / `ham_gray`, `ham_gray`@0.2 `:75-76` / — | `icon.xs` **12** / filled `text.primary`, empty `text.secondary`@0.20 / 2 |
 | Track width / h / r / fill | `144.0` `:30` / `4` / `2` / gray@0.2 `:43-45` | `144.dp` `:85` / `4.dp` / `2.dp` / `ham_gray`@0.1 `:83-86` | 144 / 4 / 2, track `surface.tertiary`, fill **`accent`** |
@@ -4229,7 +4242,7 @@ Two stacked gates: the server flag `can_auto_authorize` and the client preferenc
 **Strings / states:** none structural; callers supply their own 关闭 / 取消 — `IntroView.kt:184`, `CasSettingView.kt:60-79`. Hidden / shown (offset 0) / dragging.
 **Divergence:** iOS uses the platform sheet at system detents with a free drag indicator; Android hand-rolls the 85 % sheet. Android renders the 36 × 5 pill.
 
-### Banner / notification bar (横幅) — platforms: both
+### Banner / notification bar (横幅) — specified, shipped on neither platform
 **Purpose:** In-layout alert card for a message that belongs to a specific place on screen.
 **Layout:**
 ```text
@@ -4245,7 +4258,15 @@ Two stacked gates: the server flag `can_auto_authorize` and the client preferenc
 |---|---|---|---|
 | Padding / radius / fill / type | outer 16 — `:118`; card 12 — `:113`; r8 — `:115`; opaque type tint — `:114`, `:69-80`; white fg, all types — `:112` | — | `space.5` 16 outer; `space.4` 12 card; `radius.4` 8; `feedback.<type>` opaque; white fg |
 | Title / detail / gaps / motion / glyphs | `.bold()` — `:106`; 15 `.light` — `:108`; title→detail 2 — `:104`; icon→text default `HStack` — `:102`; `.spring()` + `move(edge: .top)` + opacity — `:119-120`; 3 s — `:125`; info blue `info.circle`, success green `checkmark.seal`, warning yellow `exclamationmark.octagon`, error red `xmark.octagon` — `:70-79,83-92` | — | `bodyBold` 17 / Bold; `subheadline` 15 / Regular; gaps `space.1` 2 and `space.3` 8; spring in from the top; 3 s auto-dismiss; tap dismisses; identical type mapping |
-**Strings / states:** none shipped; the preview carries `123` / `456` — `Banner.swift:136`. Visible / hidden, driven by the `isShow` binding. The banner ships live on both platforms and Android builds it to this table; where a screen needs no in-layout alert the component is deleted rather than left uncalled — `Banner.swift:56,136`, `NotificationService` `Banner.swift:10-54`.
+**Strings / states:** none shipped; the preview carries `123` / `456` — `Banner.swift:136`. Visible / hidden, driven by the `isShow` binding.
+
+**Correction.** This component does **not** ship. `Banner` is constructed in exactly one place —
+its own SwiftUI preview, `Banner.swift:136` — and nothing else in the app builds a
+`BannerDataModel`. Android has no banner component at all (`find . -iname '*banner*'` returns
+only `SportMainViewBannerCard` and `LibraryMainViewBannerCard`, which are announcement *content*
+cards, not notification banners). Everything above is therefore a **specification of an
+unbuilt component**, not a description of shipped UI. Treat it as the target if the banner is
+ever built; do not treat it as evidence that either platform has one today.
 
 ### Text field (输入框) — platforms: both
 **Purpose:** One shared single-line and multi-line text input, used by every form on both platforms.
@@ -4817,7 +4838,7 @@ own section or another agent's slice.
 | 24 | CAS settings (信息门户设置) | both | `shared.md:1748-1844` |
 | 25a | Settings hub (设置) | Android only | `SettingView.kt:40-90`; iOS inlines the rows on the My tab |
 | 25b, 25c, 25i | Language / widget / promotion settings | Android only | no iOS equivalent for language (iOS follows the system locale) or widget settings |
-| 25d | Print / share-file flow | Android only | 5 surfaces; the only spinner+label pairing in the codebase |
+| 25d | Print / share-file flow | both | iOS `PrintPrepareView` (330 ln) + `PrintFileSourcePicker` + `PrintActionExtension`; Android `feature/print/` 5 surfaces, incl. the only spinner+label pairing in the codebase |
 | 25e, 25g, 25h | Social-account binding, authorized apps, passkey config | iOS only | `SyncSocialAccountView.swift:23-90`; `IOS/ui/sso/AuthorizedAppsView.swift`; Android has passkey *login* only (`LoginView.kt:202-232`) |
 | 25f | User center / profile info | both | flagged in the audit as **not extracted** — needs a follow-up pass |
 | 26 | Cross-cutting findings | — | 17 ranked findings (dead iOS components, inverted success/error icon colours, the r8/r12 button triple standard, unlocalised iOS strings, unused `ham_divider` token) — belong in the top-level spec |

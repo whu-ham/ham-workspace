@@ -404,7 +404,17 @@ The gap list. Each entry is a task.
 
 ### 7.0 Findings from the full screen audit
 
-Auditing all 68 screens surfaced far more than the earlier spot checks did.
+**Scope — read this before using the counts below.** This audit covered **68** of the sections
+in [`screens.md`](screens.md), which enumerates **129** `###` entries across 12 modules. The 129
+counts analysis sections as well as screens — `screens.md` §1.2 "Card scoring and ordering",
+§1.3 "Shared card container" and the per-module "Findings" and "Route table" sections are not
+screens — so the real screen count is lower than 129 but **still well above 68**.
+
+The practical consequence: **every "0 occurrences" claim below is scope-limited to the 68
+sections that were audited.** It means "0 in what was checked", not "0 in the app". The 61
+unaudited sections are concentrated in User center (21 sections) and Shared components (15),
+which is exactly where the remaining copy problems are likely to be. Closing that gap is a
+prerequisite to treating §7 as complete.
 
 | Category | Count |
 | --- | --- |

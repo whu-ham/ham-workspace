@@ -2,7 +2,8 @@
 
 The work list for bringing the two clients' interfaces into line.
 
-This is **not** the specification. The specification is `screens.md` (129 screens, each with an
+This is **not** the specification. The specification is `screens.md` (129 sections — 120 screens
+plus 9 analysis sections — each with an
 `iOS` / `Android` / `normative` column per element) plus `design-system.md` (the tokens). This
 document is the gap list derived from them: for every page, what each platform currently renders,
 what the agreed value is, and which side moves.
@@ -26,7 +27,10 @@ Wording divergences are **not** here — see `copy-and-strings.md` §7. Behaviou
 - [12. Shared components](#12-shared-components)
 - [13. Standalone screens](#13-standalone-screens)
 - [14. Cross-cutting](#14-cross-cutting)
-- [15. Screens already at parity](#15-screens-already-at-parity)
+- [15. Motion](#15-motion)
+- [16. Accessibility](#16-accessibility)
+- [17. Non-content states](#17-non-content-states)
+- [18. Screens already at parity](#18-screens-already-at-parity)
 
 ---
 
@@ -163,7 +167,8 @@ gap, recorded in `logic-parity.md` §7.
 | Function subtitle | 11 | 12 | **12** | iOS → 12. 🟡 |
 | Settings — account row | 账号信息 / 你的图书馆系统认证信息 | 图书馆账号信息 / 用以预约座位… | **账号信息** + iOS subtitle | Android. 🟡 |
 | Captcha row | 验证码设置 | 验证码识别设置 | **验证码识别设置** | iOS. 🟡 |
-| Print card | **absent** | present | **present on both** | iOS: build the screen (data layer already ships, unreferenced). 🔴 |
+| Print card | present | present | **present on both** | Both, small: unify the share-hint string (iOS `或者通过其他应用分享文件到Ham中打印`), iOS arrow **12** vs Android `20.dp`, Android must stop re-fetching the printer list on every recomposition, and Android's `打印任务` card is dead code. 🟡 |
+| Print drop zone · printer row | `168`/r 16 · pad 16/r 16/48 | `168.dp`/r 16 · pad 16/r 16/48 | **identical** | none — already at parity. |
 | History grouping | grouped by date with totals | flat list | **grouped by date** | Android. 🟠 |
 
 ---
@@ -212,7 +217,7 @@ gap, recorded in `logic-parity.md` §7.
 | Semester divider padding | 12 | 4 | **8 [new]** | Both. 🟡 |
 | Year-row spacing | 5 | 4 | **4** | iOS. 🟡 |
 | Watermark | 220 @ 0.10, offset (60, 20) | 240 @ 0.15, offsetY 64 | **220 @ 0.10** | Android. 🟡 |
-| Chevron | 8 | 24 | **12 [new]** | Both. 🟠 |
+| Chevron | 8 | 24 | **12 iOS / 16 Android [new]** | Both. 🟠 |
 | Pinned select header | `VisualEffectBlur` | flat `text.secondary` @ 0.25 over `surface.primary` | **one treatment** | Android: add blur, or agree on flat. 🟠 |
 | Select-mode spacer | 96 | 92 | **96** | Android. 🟡 |
 | Gap before semester list | 24 | 8 | **8** | iOS. 🟡 |
@@ -338,9 +343,9 @@ Divergences that repeat across many screens. Fixing these once closes dozens of 
 
 | # | Pattern | iOS | Android | Screens affected | Agreed |
 | --- | --- | --- | --- | --- | --- |
-| 1 | **Chevron size** | 8pt — 22 sites across 8 files | Material default 24dp | ~20 | **12 [new]** — neither current value was chosen |
+| 1 | **Chevron size** | 8pt — 22 sites across 8 files | Material default 24dp | ~20 | **12 iOS / 16 Android [new]** — caption-paired, so the platforms differ on purpose; neither current value was chosen |
 | 2 | **Tint alpha** | 0.10 / 0.13 / 0.25 depending on screen | 0.15 / 0.20 / 0.25 | ~15 | **0.15** for `tint.subtle`, 0.10 for chips |
-| 3 | **Watermark size** | 36, 128, 156, 220 — hand-rolled, outside the primitive | 56, 60, 72, 128, 144, 172, 240, 250 | ~20 | **128 @ 0.12**, bottom-end (16, 16), fixed frame not font size |
+| 3 | **Watermark size** | 36, 128, 156, 220 — hand-rolled, outside the primitive | 56, 60, 72, 128, 144, 172, 240, 250 | ~20 | **128 @ 0.15**, bottom-end (16, 16), fixed frame not font size |
 | 4 | **Hero value size** | 28 / 36 / 50 / 72 depending on screen | 24 / 28 / 32 | ~12 | Use the type scale: 28 for card heroes, 50 for schedule, 36 for weather |
 | 5 | **Icon sizes** | unsized in many places, inheriting ~17 | explicit, but inconsistent (25, 30, 36, 56, 72) | ~25 | Use the icon scale: 12 / 20 / 24 / 32 / 64 / 72 |
 | 6 | **Card gap in a scroll column** | 8 (implicit, unauthored) | 8 or 16 depending on screen | ~10 | **8** |
@@ -348,13 +353,76 @@ Divergences that repeat across many screens. Fixing these once closes dozens of 
 | 8 | **Function-row height** | 150 (library, sport) | 142 / 160 | 4 | **150** |
 | 9 | **Secondary-text colour** | adaptive | hardcoded `Gray`, no dark variant | every screen | **adaptive `text.secondary`** |
 | 10 | **Module brand vs accent** | raw `Color.blue`/`.green` at call sites | tokens, but two resolve wrong | ~10 | Use `accent` for interactive, `brand.*` only in the three identity places |
+| 11 | **Icon *metaphor*** | court / grid / filled-circle | ball / school / bare glyph | see `design-system.md` §2.8 | 5 of 8 function-grid keys, 1 of 3 tab icons, 4 of 6 status-card headers agree today. Sizes are already specified — the **glyph** is not |
 
 Item 10 is the root cause of several rows above: iOS writes `Color.blue` literally in the library
 module and `Color.green` in the sport module, bypassing the tokens.
 
 ---
 
-## 15. Screens already at parity
+## 15. Motion
+
+There is no motion scale on either platform today — see `design-system.md` §2.9. Every row below
+is a value that must be written down for the first time on at least one platform.
+
+| Behaviour | iOS | Android | Agreed | Change |
+| --- | --- | --- | --- | --- |
+| **Page push / pop** | no duration anywhere — bare `withAnimation`, `Navigation.swift:91` | 400 ms in, 300 ms out — `NavHost.kt:45,55` | **300 ms symmetric**, ease-out in / ease-in out | Android 400 → 300; iOS write an explicit 300. Also dedupe `NavHost.kt` — the two overloads repeat the values |
+| **Sheet duration** | system default | not written — `Animatable` default spring, `Sheet.kt:187` | **300 ms** | both write it |
+| **Sheet detents** | **0** uses of `presentationDetents` | 85 % height | declare detents explicitly | iOS |
+| **Sheet scrim** | system default | `0.5 × dragProgress`, `Sheet.kt:92` — no independent animation | **max alpha 0.5, animating on its own curve** | Android decouple from drag |
+| **Toast dwell** | **3.3 s** — `ToastView.swift:37` | **2.0 s** — `ToastManager.kt:150` | **3.0 s** | both |
+| **Toast exit** | slides and fades | **fades only** — `ToastManager.kt:154` | slide **and** fade in and out | Android add the slide |
+| **Toast radius** | **0** — plain rectangle, `ToastView.swift:105` | 12 dp | **12** | iOS |
+| **Tab switch** | animated + **heavy haptic** — `MainTabView.swift:32` | `fadeIn`/`fadeOut`, no haptic | **instant content swap, no haptic** | both remove the animation; iOS remove the haptic |
+| **Button press** | none | **whole button dims to alpha 0.25** — `Button.kt:48` | native press treatment | Android delete the dim |
+| **Loading → content** | **hard swap** at 51 `ProgressView` sites | crossfade, spec almost never given | **300 ms crossfade** | iOS add; Android pin the spec |
+| **List item insert / remove** | none | `.animateItem()` in one file | **150 ms both** | iOS add |
+| **Pull-to-refresh** | **none** — 0 uses of `.refreshable` | one screen — `StatusContainerView.kt:157` | needs a product decision | §12 of `logic-parity.md` |
+| **`.fade` transition** | pod's **asymmetric** fade at 13 sites — fade in, cut out | n/a | first-party symmetric `AnyTransition.fade` | iOS — this is the highest-severity motion defect |
+| **Reduced motion** | not honoured | not honoured | **honour on both** | both |
+
+---
+
+## 16. Accessibility
+
+Both platforms fail in the *same* direction, so this is not a parity list — it is one shared
+work item. See `design-system.md` §2.10 for the rules.
+
+| Item | iOS | Android | Work |
+| --- | --- | --- | --- |
+| Icons labelled | **2** of 236 `Image(systemName:)` in `iOS/` — 4 accessibility modifiers in the whole app, most of them `#if HAM_E2E` no-ops | **7** real strings of 283 `contentDescription` mentions — the rest are 267 `null` and 8 `""` | label every meaningful icon on both |
+| Row / group merging | **0** `accessibilityElement(children:)` | **1** `mergeDescendants` | merge the row so decorative icons need no label of their own |
+| State semantics | 1 `accessibilityAddTraits` | **0** `toggleable`, **0** `selectable` | Android: expose toggle/selected state |
+| Announcements | **0** | **0** | announce toasts and loading on both |
+| Test identifiers | **4** | **7** | both — this doubles as the audit trail for the above |
+| Touch targets | unenforced | unenforced, 0 `minimumInteractiveComponentSize` | audit below-minimum targets; start with the timetable cell |
+| Large text clipping | ~184 fixed-width frames | ~202 fixed heights | replace fixed heights on text containers with minimum heights |
+
+---
+
+## 17. Non-content states
+
+See `design-system.md` §3.10. Each row is a state that is absent or wrong on **both** platforms,
+so unlike most of this document these are not divergences — they are shared gaps.
+
+| State | iOS | Android | Work |
+| --- | --- | --- | --- |
+| Shared loading component | **none** — `ProgressView` repeated ~40× | `HamLoadingProgressBar`, 61 sites | iOS build one; Android keep |
+| Skeleton where shape is known | **one** — `.redacted` seat grid | **none** | Android add; iOS extend |
+| Shared empty component | **absent** | **absent** | build one per platform to §3.9 |
+| Error default action | **返回** — `ErrorView.swift:22` | **完成** — `ErrorView.kt:60` | **重试** on both |
+| Retry in the shared error component | **no** | **no** | add to both |
+| Offline | none — reachability never drives UI | **none** — no connectivity check at all | persistent banner on both |
+| Session expired | none — `AuthPbInterceptor` is a pass-through | none — no auth interceptor | its own state and copy on both |
+| Rate-limited / blocked | none | none | surface the server's message |
+
+The Android error text 网络异常，请稍后重试 (`ToastManager.kt:247`) promises a retry the UI does
+not offer. It is shown at ~70 call sites against 13 `ErrorView` sites — the dominant pattern.
+
+---
+
+## 18. Screens already at parity
 
 Do not re-audit these.
 
