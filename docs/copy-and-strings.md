@@ -202,80 +202,91 @@ A student sees `4.00` on one platform and `4.000000` on the other for the same c
 
 ## 4. String keys
 
-This is the part that is currently broken.
-
-### 4.1 The problem
-
-The two platforms' catalogs cannot be diffed, synced, or sent to a translator together:
+> **Updated 2026-09-24.** This section was written when iOS used `SCREAMING_SNAKE_CASE` and, mostly,
+> the Chinese text itself as the key. That world ended with `34a59411 refactor(i18n): move to a
+> String Catalog and one structured key convention (#175)`, which deleted every
+> `Ham/{zh-Hans,en,ja}.lproj/Localizable.strings` and replaced them with `Ham/Localizable.xcstrings`
+> (817 keys, four locales). The measured state is now:
 
 | | iOS | Android |
 | --- | --- | --- |
-| Convention | `SCREAMING_SNAKE_CASE`, mostly no prefix | `snake_case`, loosely module-prefixed |
-| Example | `DELETE_THIS_SCHEDULE` | `library_reserve` |
-| Module prefix | none | inconsistent (`common_`, `library_`, `sport_`, but also bare `select_color`, `picker_confirm`) |
-| Keys are Chinese | **777 of 898 (87%)** | 0 |
+| Convention | `<area>.<screenOrOwner>.<thing>` — dotted lower-camelCase, always prefixed | `snake_case`, loosely module-prefixed |
+| Example | `course.main.deleteThisClass` (删除这节课) | `library_reserve` |
+| Keys | **817**, of which **0** contain an underscore | (unchanged) |
+| Module prefix | always — 34 areas; `common` alone is 311 of 817 | inconsistent (`common_`, `library_`, `sport_`, but also bare `select_color`, `picker_confirm`) |
+| Keys are Chinese | **13 of 817 (1.6%)**, all deliberate | 0 |
 
-Worse, **85% of iOS entries use the Chinese text itself as the key** — 765 of 898 unique keys, where the entry is literally `"预约" = "预约"`. That
-means:
+Before the migration, **777 of 898 (87%) iOS entries used the Chinese text itself as the key** —
+765 of 898 unique keys, where the entry is literally `"预约" = "预约"`. That meant rewording any
+string silently changed its key and orphaned the other locales, keys could not be searched or
+grouped by module, and a typo in the copy became a permanent identifier. All three failure modes
+are gone on iOS.
 
-- rewording any string silently changes its key, orphaning the other two locales;
-- keys cannot be searched, sorted, or grouped by module;
-- a typo in the copy becomes a permanent identifier.
+What remains:
+
+- **13 keys are still bare Simplified Chinese** — `总馆` · `信息分馆` · `工学分馆` · `医学分馆` ·
+  `专业教育必修` · `专业教育选修` · `通识教育必修` · `通识教育选修` · `公共基础必修` · `跨学院专业课`
+  · `羽毛球` · `乒乓球` · `健身房`. Each carries the comment *"Data alias: a server value looked up
+  through this table at runtime."* They are server enum values used as lookup keys, so they are
+  Chinese **by design**, not by neglect — but they still cannot be reworded safely.
+- **Android still ships unprefixed keys** (`select_color`, `picker_confirm`, `not_set`).
+- **The two platforms still spell the same slot differently**, so the catalogs cannot be
+  byte-diffed. See §4.3.
 
 ### 4.2 The standard
 
-**`snake_case`, module-prefixed, lowercase, ASCII only.**
+**One namespace, two spellings.** Both platforms fill the same three slots in the same order; only
+the separator and the letter case differ.
 
-```
-<module>_<element>[_<qualifier>]
-```
+| | iOS | Android |
+| --- | --- | --- |
+| Shape | `<area>.<screenOrOwner>.<thing>` | `<module>_<element>[_<qualifier>]` |
+| Separator | `.` | `_` |
+| Case | lowerCamelCase per segment | snake_case |
+| Segments | 2 or 3 — 377 keys have 2, 427 have 3 | 2 or 3 |
 
 | Part | Rule | Examples |
 | --- | --- | --- |
-| `<module>` | the feature area | `library`, `sport`, `score`, `course`, `coursescore`, `schedule`, `status`, `my`, `cas`, `user_center`, `common` |
-| `<element>` | what it is | `quick_book`, `reserve`, `settings`, `history` |
-| `<qualifier>` | optional disambiguator | `cta`, `title`, `desc`, `error`, `empty`, `success`, `subtitle` |
+| `<area>` / `<module>` | the feature area | iOS: `common` (311) · `course` (83) · `library` (59) · `score` (57) · `coursescore` (51) · `status` (50) · `shared` (44) · `print` (29) · `schedule` (29) · `widget` (24) · `sport` (13) · `sso` (11) · `usercenter` (11) · `sync` · `watch` · `about` · `my` · `siri` · `main` · `bus` · `pay`. Android: `library`, `sport`, `score`, `course`, `coursescore`, `schedule`, `status`, `my`, `user_center`, `common` |
+| `<screenOrOwner>` | the owning view or view-model, lowerCamelCase | `printPrepareView`, `userCenterView`, `sSOAuthorizationSheet` |
+| `<thing>` / `<element>` | what it is | `loadError`, `noPrinterFound`, `logInAgain` |
+
+Two area names changed in the migration and must be used in their new form on iOS: **`user_center`
+is now `usercenter`**, and **`cas` is now `sso`** (with `usercenter` taking the scan/login screens).
+Four areas are new and were not in the previous list: `shared`, `print`, `widget`, `watch`.
 
 Rules:
 
-1. **ASCII only.** Never use Chinese, spaces, or punctuation in a key.
-2. **Never use the copy text as the key.** The key describes the string's *role*; the value is
-   the words. This is what makes rewording safe.
-3. **Prefix by module, always** — including on iOS.
+1. **ASCII only.** Never use Chinese, spaces, or punctuation in a key. The 13 data-alias keys above
+   are the only sanctioned exception, and each must carry the `Data alias` comment.
+2. **Never use the copy text as the key.** The key describes the string's *role*; the value is the
+   words. This is what makes rewording safe, and it is now true of 804 of 817 iOS keys.
+3. **Prefix by area, always** — including on iOS, where the catalog now enforces it.
 4. **Name the role, not the current wording.** `sport_order_cta`, not `sport_yuding`.
-5. **Reserve suffixes** for predictable roles:
-
-| Suffix | Use |
-| --- | --- |
-| `_title` | screen or card title |
-| `_subtitle` | secondary line under a title |
-| `_desc` | explanatory body |
-| `_cta` | the primary button label |
-| `_empty` | empty-state text |
-| `_error` | failure text |
-| `_success` | success text |
-| `_confirm(_title/_desc)` | confirmation dialog |
-| `_hint` | inline guidance |
+5. **Do not reserve suffixes.** An earlier revision of this section prescribed `_title`,
+   `_subtitle`, `_desc`, `_cta`, `_empty`, `_error`, `_success`, `_confirm`, `_hint`. Neither
+   platform works that way: of 817 iOS keys, **0** end in `Title`, `Subtitle`, `Cta`, `Success`,
+   `Confirm`, `Hint` or `Message`; 5 end in `Error`, 3 in `Empty`, 3 in `Desc`. Put the role word
+   inside the segment — `loadError`, `noPrinterFound`, `uploadFailed` — where it reads the same in
+   both spellings.
 
 ### 4.3 Migration
 
-- **All new keys on both platforms follow §4.2.** This is the rule that matters most and costs
-  nothing.
-- **Android**: keys are close already. Tighten the unprefixed ones (`select_color`,
-  `picker_confirm`, `not_set`) into a module namespace as they are touched.
-- **iOS**: this is the larger job. 777 keys need identifiers. Do it **module by module**, not in
-  one pass — start with the modules that change most (sport, library, score). Because the
-  current keys are the Chinese text, the migration is mechanical: generate the new key from the
-  module + element, move all three locales together, then update the call sites.
-
-A shared key namespace is what lets the two catalogs be diffed. Until iOS migrates, use the
-**Chinese text** as the join key when comparing the two platforms.
+- **iOS: done.** `34a59411` converted all 898 entries to 817 structured keys in one pass, added
+  **zh-Hant** as a fourth locale, and moved plurals into the catalog. Do not reintroduce Chinese
+  or `snake_case` keys.
+- **Android: the remaining work.** Tighten the unprefixed keys (`select_color`, `picker_confirm`,
+  `not_set`) into a module namespace as they are touched.
+- **Diffing the two catalogs** no longer needs the Chinese text as a join key. Normalise
+  mechanically — `.` ↔ `_`, and lower-camelCase ↔ snake_case per segment — then diff. The residual
+  mismatches are the finding: 未登录 is `common.notLoggedIn` on iOS but `sport_setting_not_logged_in`
+  on Android, so the same string sits in two different area namespaces.
 
 ---
 
 ## 5. File organisation
 
-### 5.1 iOS has six catalogs, not one
+### 5.1 iOS has five catalogs, not one
 
 This is easy to miss and is the source of several current defects. Strings are spread across
 every app target, and each target has its own bundle — so **a string in the main catalog is
@@ -283,22 +294,22 @@ invisible to the widget and the Siri extension**.
 
 | # | Catalog | Locale dirs | Entries (zh) | Key style |
 | --- | --- | --- | --- | --- |
-| 1 | `Ham/{locale}.lproj/Localizable.strings` | 3 | **898** | 85% Chinese-as-key |
-| 2 | `Ham/{locale}.lproj/InfoPlist.strings` | 3 | 4 | `CFBundle*` |
-| 3 | `Ham/SiriIntent/{locale}.lproj/Localizable.strings` | 3 | **2** | Chinese-as-key |
-| 4 | `Ham/SiriIntent/{locale}.lproj/Intents.strings` | 3 | 26 | Xcode-generated (`956YUW`) |
-| 5 | `Ham/Widget/{locale}.lproj/WidgetIntentConfiguration.strings` | 3 | 48 | Xcode-generated (`0yHcjK`) |
-| 6 | `Ham/SiriIntentUI/{locale}.lproj/MainInterface.strings` | 3 | 2 | Interface Builder |
+| 1 | `Ham/Localizable.xcstrings` | **4** | **817** | 1.6% Chinese-as-key (13 data aliases) |
+| 2 | `Ham/{locale}.lproj/InfoPlist.strings` | 4 | 4 | `CFBundle*` |
+| — | ~~`Ham/SiriIntent/{locale}.lproj/Localizable.strings`~~ — **deleted by `34a59411`**; its two strings moved into catalog 1. `Ham/SiriIntent/{locale}.lproj/Intents.strings` (29 generated IDs) survives below. | — | — | — |
+| 3 | `Ham/SiriIntent/{locale}.lproj/Intents.strings` | 4 | 26 | Xcode-generated (`956YUW`) |
+| 4 | `Ham/Widget/{locale}.lproj/WidgetIntentConfiguration.strings` | 4 | 48 | Xcode-generated (`0yHcjK`) |
+| 5 | `Ham/SiriIntentUI/{locale}.lproj/MainInterface.strings` | 4 | 2 | Interface Builder |
 
-Catalogs 3–5 are **not** duplication for its own sake — Siri intent and widget-configuration
+Catalogs 3–4 are **not** duplication for its own sake — Siri intent and widget-configuration
 strings *must* live in their target's bundle, and their keys are generated by Xcode from the
 intent definition. That part is platform-forced.
 
 What is **not** forced, and is wrong:
 
 - **Shared copy duplicated across catalogs.** The widget update-interval options (5分钟,
-  10分钟, 15分钟, 30分钟, 1小时, 2小时) are defined in both catalog 1 and catalog 5. They can
-  drift, and 10分钟 already appears four times inside catalog 5 alone.
+  10分钟, 15分钟, 30分钟, 1小时, 2小时) are defined in both catalog 1 and catalog 4. They can
+  drift, and 10分钟 already appears four times inside catalog 4 alone.
 - **Untranslated English in the zh-Hans catalogs.** `MDC7j9 = "Success Message"`,
   `iQFhaG = "Error Message"`, `jO5xID = "Error Message"` in
   `SiriIntent/zh-Hans.lproj/Intents.strings`. These are default values nobody translated.
@@ -309,7 +320,7 @@ What is **not** forced, and is wrong:
 
 | Platform | Layout |
 | --- | --- |
-| iOS | One `Localizable.strings` per locale in `Ham/{zh-Hans,en,ja}.lproj/`, plus `Localizable.stringsdict` for plurals. Group with `// MARK: -` comments per module. Target-specific catalogs (Siri, widget) hold **only** strings that must live there. |
+| iOS | One `Ham/Localizable.xcstrings` holding all four locales; plurals inline as `substitutions`; grouping is by the dotted key prefix, not comments. Target-specific catalogs (Siri, widget) hold **only** strings that must live there. |
 | Android | One `strings.xml` per Gradle module under `src/main/res/values/`, with `values-en` and `values-ja` siblings. |
 
 Rules:
@@ -333,46 +344,71 @@ Rules:
 
 ### Locales
 
-Both platforms support **zh-Hans (default), en, ja**. A new string must be added to all three in
-the same commit. If a translation is genuinely unavailable, add the default value rather than
-leaving the key absent — a missing key renders the raw key to the user.
+iOS supports **four** locales — `Ham/{zh-Hans,zh-Hant,en,ja}.lproj/`, and `Localizable.xcstrings`
+is `sourceLanguage: en` with all four present on every one of its 817 keys. Android supports
+**three** — `values` (zh-Hans), `values-en`, `values-ja`. **zh-Hant is now an iOS-only locale**, which
+is a divergence this document did not previously have to record. A new string must be added to every
+locale the platform ships, in the same commit. If a translation is genuinely unavailable, add the
+default value rather than leaving the key absent — a missing key renders the raw key to the user.
 
 ### No hardcoded user-visible text
 
 Every user-visible string lives in a strings file. No exceptions.
 
-The current gap is lopsided and worth stating plainly:
-
-A full-screen audit of every screen found **282 hardcoded CJK literal sites**, by module:
+The current gap, re-measured on iOS `main` `9a9c6a3f` (2026-09-24) with a Swift lexer that walks
+each non-test file skipping comments and string delimiters, and that classifies a CJK literal as
+hardcoded unless it is routed through the localization system (`String(localized:)`,
+`NSLocalizedString`, `.localized`), is a `Log.*` argument, or is a parse / compare key:
 
 | Module | Hardcoded CJK literals |
 | --- | --- |
-| Sport | **76** |
-| Library | **70** |
-| My / user center | **67** |
-| Shared | **27** |
-| Status | **18** |
-| Score + schedule | **21** |
-| Course | **2** |
-| CourseScore | **1** |
-| **Total** | **282** |
+| Sport | **13** |
+| Library | **40** |
+| My / user center | **6** |
+| Shared | **4** |
+| Status | **0** |
+| Score + schedule | **23** |
+| Course | **0** |
+| CourseScore | **0** |
+| Everything else (Widget, print, privacy, CAS, pay, bus, sync, …) | **64** |
+| **Total, all of `Ham/`** | **150** across **55** files |
+| &nbsp;&nbsp;of which fixture / preview / debug-only | 22 |
+| **Production sites** | **128** across **47** files |
 
-This supersedes the earlier per-file grep (175 sites across 59 files) — that count missed
-literals inside interpolations, model-level status names, and bare `Text(_: StringProtocol)`
-calls, which do **not** localise even when a matching catalog key exists.
+The two earlier counts (**282**, and the **175**-site grep before it) are **withdrawn**: applying
+this same rule to the pre-migration `811c03f6` yields 339, so neither number is reproducible
+there either. The migration `34a59411` removed the single largest cause — model-level status
+names that were CJK literals resolved through `.localized` at the call site.
 
 Notes:
 
-- **Library is the worst module**: 42 distinct Chinese literals plus 3 `-` separators and 2
-  `Hello, World!` stubs, across **20 files** (not 10). iOS hardcodes roughly 30 library labels
-  that already exist in `Localizable.strings`.
-- **Sport hardcodes its status names in the data model** (待付款 / 待使用 / 使用中 / 已使用 /
-  已取消 / 已退款 / 未知), passed through `.localized` at the call site, so they resolve only if
-  a matching catalog key happens to exist.
+- **Library is still the worst module** — 40 sites, 31 distinct literals, 12 files, including 2
+  `Hello, World!` stubs (`LibraryEducationQuickLoginView.swift:12`,
+  `LibraryMainViewBannerImageCover.swift:12`). 32 of the 40 already exist as a `zh-Hans` value
+  somewhere in `Ham/Localizable.xcstrings` under a new dotted key — they are unreferenced values,
+  not missing keys. Across all 150 sites, 90 have a matching catalog value.
+- **Sport's status names are no longer literals** — `SportOrderDetail.swift:23-35` maps every case
+  to `String(localized:)` with a dotted key (`common.unknown`, `common.pendingPayment`,
+  `common.pendingUse`, `common.inUse`, `common.used`, `shared.bookingVO.canceled`,
+  `common.refunded`). The surviving model-level status names are **library** booking states:
+  `LibraryModel.swift:49-56` hardcodes 8 (预约 / 履约中 / 暂离 / 已结束 / 已取消 / 失约 / 早退 /
+  未签退).
+- **Two live bugs**: `Ham/Widget/Course/CourseWidget.swift:321` passes `今天` / `明天` to
+  `String(localized:)`, and no such keys exist in the catalog (keys are dotted), so the widget
+  renders the raw literal — use `status.today` / `status.tomorrow`.
+  `Ham/shared/basic/location/LocationManager.swift:192` passes a whole Chinese sentence as the
+  `withPurposeKey:` argument, but that argument is an **`InfoPlist.strings` key** — the sentence is
+  a *value* there, under `NSLocationWhenInUseUsageDescription`
+  (`Ham/zh-Hans.lproj/InfoPlist.strings:7`). The lookup misses, so the prompt is untranslatable.
 - **Android's Debug screen is absent from all `.lproj`/`values-*` files** — it is entirely
-  English.
-- Android's three include `Text("关闭")` in the shared bottom-sheet component, which surfaces in
-  every language.
+  English (`DebugView.kt:64,71,81,105,137,179,196`), which is why it contributes no CJK site.
+- **Corrected 2026-09-24**: the often-cited Android `Text("关闭")` is **not** a shipped string — it
+  sits inside `private fun Preview()` in `core/ui/container/Sheet.kt:293`. Android's shipped
+  hardcoded CJK is overwhelmingly in the model layer, not in composables: 79 sites across 19 files,
+  led by `BookingVO.kt` (15 booking-status names), `CCKVDefaultValue.kt` (14 server-default titles,
+  some with a ja twin inline), `ResponseBean.kt` (14 error strings), `DateTimeUtils.kt` (8 weekday
+  labels), `HamResponse.kt` (5), `BiometricUtils.kt` (4) and `ToastManager.kt` (3). See
+  [§7.6](#76-hardcoded-strings).
 - **Server-driven copy with no fallback**: ten categories of user-visible text arrive from CCKV
   or the server with no catalog fallback on either platform — consent messages, external-service
   titles, want/comment card titles and hints, the comment-disabled reason, the not-found message,
@@ -384,7 +420,7 @@ Use plural rules for any string containing a countable number.
 
 | Platform | Mechanism | Current state |
 | --- | --- | --- |
-| iOS | `Localizable.stringsdict` | **en has 105 entries, zh and ja are empty stubs** |
+| iOS | in-catalog `substitutions` + `NSStringPluralRuleType` | **8 keys** (`status.hours`, `status.minutesRemaining`, `status.overMinutes`, `status.hoursRemaining`, `status.pendingSchedules`, `status.pendingSchedulesThisWeek`, `status.studiedMinutesInTotal`, `library.history.totalMinutes`) — `Localizable.stringsdict` no longer exists |
 | Android | `<plurals>` | **0 — none defined** |
 
 Today the app relies on `%lld 分钟` style strings with no plural handling in either Chinese or
@@ -424,7 +460,7 @@ prerequisite to treating §7 as complete.
 | Placeholder / format inconsistencies | 36 |
 | Tone breaches | 28 |
 | Punctuation / spacing breaches | 49 (83 half-width-colon instances vs 32 correct) |
-| Hardcoded CJK literals | 282 (see [§6](#6-localization-requirements)) |
+| Hardcoded CJK literals | 150 (see [§6](#6-localization-requirements)) |
 | Missing translations, junk and dead strings | 101 |
 
 **Ten most important:**
@@ -454,15 +490,15 @@ zero cutesy particles, and no terminal `。` on any label, button, toast or stat
 
 ### 7.1 iOS catalog sprawl
 
-Strings are spread across six catalogs (see [§5.1](#51-ios-has-six-catalogs-not-one)). Three
+Strings are spread across five catalogs (see [§5.1](#51-ios-has-five-catalogs-not-one)). Three
 concrete defects fall out of it:
 
 | # | Issue | Where |
 | --- | --- | --- |
-| 1 | Widget update-interval options duplicated — 5分钟/10分钟/15分钟/30分钟/1小时/2小时 exist in both the main catalog and the widget's | `Ham/zh-Hans.lproj/Localizable.strings` + `Widget/zh-Hans.lproj/WidgetIntentConfiguration.strings` |
+| 1 | Widget update-interval options duplicated — 5分钟/10分钟/15分钟/30分钟/1小时/2小时 exist in both the main catalog and the widget's | `Ham/Localizable.xcstrings` + `Widget/zh-Hans.lproj/WidgetIntentConfiguration.strings` |
 | 2 | Untranslated English defaults sitting in the zh-Hans catalog — `Success Message`, `Error Message` ×2 | `SiriIntent/zh-Hans.lproj/Intents.strings` (`MDC7j9`, `iQFhaG`, `jO5xID`) |
 | 3 | 15 duplicated values inside the 48-entry widget catalog — 10分钟 appears 4×, `确认一下，是指"10分钟"对吗？` appears 4× | `Widget/zh-Hans.lproj/WidgetIntentConfiguration.strings` |
-| 4 | Cutesy tone and a `-` nav notation in the Siri catalog — `未登录图书馆，先前往我的-图书馆登录哦～` | `SiriIntent/zh-Hans.lproj/Localizable.strings` |
+| 4 | ~~Cutesy tone and a `-` nav notation in the Siri catalog — `未登录图书馆，先前往我的-图书馆登录哦～`~~ **resolved**: that catalog was deleted by `34a59411`; the string no longer ships. | — |
 | 5 | 4 duplicated values in the 26-entry Siri intent catalog — `${errorMessage}` appears 5× | `SiriIntent/zh-Hans.lproj/Intents.strings` |
 
 ### 7.2 Terminology
@@ -473,11 +509,11 @@ concrete defects fall out of it:
 | 2 | Sport order footer CTA: iOS 预约 vs Android 预定 — the only true cross-platform split | `SportOrderViewFooter.swift:31` vs `sport_reserve` |
 | 3 | 获取/更新 inversion in the score fetch flow: iOS 更新成功/更新失败 vs Android 获取成功/获取失败 for the identical step | iOS `ScoreUpdateByCasView` vs Android `strings.xml:29-31` |
 | 4 | Same inversion in the course timetable fetch flow | both platforms |
-| 5 | 其他/其它 — iOS has both two lines apart; iOS sport says 其他设置, Android says 其它设置 | `Localizable.strings:568,570`; `SportSettingViewOtherCard.swift:15` |
-| 6 | 没有历史记录 (iOS) vs 暂无历史记录 (Android) | `Localizable.strings:743` vs `library_no_history` |
+| 5 | 其他/其它 — iOS still ships **both** spellings under two separate keys: `common.otherSettings` = 其他设置 is now **unused** (its only consumer, `SportSettingViewOtherCard.swift`, was deleted by `53a17721` #101), while `common.otherSettings2` = 其它设置 is the CAS row (`CasSettingView.swift:73`) and matches Android's `cas_other_settings`; Android also has `sport_setting_other_title` = 其它设置 | `Localizable.xcstrings`: `common.otherSettings` / `common.otherSettings2`; `CasSettingView.swift:73`; `cas/.../values/strings.xml:11`, `sport/.../values/strings.xml:57` |
+| 6 | 没有历史记录 (iOS) vs 暂无历史记录 (Android) | `Localizable.xcstrings`: `common.noHistory` vs `library_no_history` |
 | 7 | 加载异常 / 加载时遇到错误 / 加载时遇到了错误 — three spellings, one missing 了 | library + status |
 | 8 | 今天/明天 vs 当天/隔天 — Android sport uses 明天/今天 where iOS uses 隔天/当天, which appear nowhere else | `sport_setting_day_tomorrow` vs `SportSettingViewStarredOrderCard.swift:38` |
-| 9 | 还有不到一分钟 vs 还有不到1分钟 | `Localizable.strings:11` vs Android |
+| 9 | 还有不到一分钟 vs 还有不到1分钟 | `Localizable.xcstrings`: `status.lessThanAMinute` vs Android |
 | 10 | 取消 vs 返回 vs 关闭 for dismiss actions | both |
 
 ### 7.3 Wrong values behind right-sounding keys
@@ -487,8 +523,8 @@ Three keys whose value contradicts their purpose. The full list of 60 is summari
 
 | Issue | Where |
 | --- | --- |
-| `"CONFIRM" = "更改"` — the confirm key renders "change" | `Localizable.strings:104` |
-| `"CANCEL" = "返回"` — the cancel key renders "back" | `Localizable.strings:86` |
+| `"CONFIRM" = "更改"` — the confirm key renders "change" | `Localizable.xcstrings`: `library.modifybooking.confirm` (en `Confirm`) |
+| `"CANCEL" = "返回"` — the cancel key renders "back" | `Localizable.xcstrings`: `common.dismiss` (en `Cancel`); 返回 is also `common.back` (en `Back`) |
 | `cas_bus_success_message` = 你可以开始使用图书馆了 — a 校巴 string that says 图书馆 | `feature/cas/.../strings.xml:23` |
 
 Also from the screen audit: `未知倒序` (a sort chip reading "unknown descending order"),
@@ -528,17 +564,66 @@ non-existent keys, 9 blank-state placeholders, 20 missing translations. Highligh
 
 | Platform | zh keys | en keys | ja keys | Missing from ja | Missing from en |
 | --- | --- | --- | --- | --- | --- |
-| iOS (main catalog) | 898 | 894 | 883 | **17** | **6** |
-| Android | ~919 | ~919 | ~919 | — | — |
+| iOS (main catalog) | **817** | **817** | **817** | **0** | **0** |
+| Android | **976** | **968** | **968** | **0** | **0** |
 
-iOS also carries 2 orphan keys in each of `en` and `ja` that have no zh source.
+**iOS** — every one of the 817 keys carries all four locales (`en`, `ja`, `zh-Hans`, `zh-Hant`);
+the old 898 / 894 / 883 counts and the 17 + 6 gaps belonged to the `.strings` files deleted by
+`34a59411`. 22 ja values are byte-identical to their `zh-Hans` value — most are correct Japanese
+(同意, 名称, 医学, 工学, 保存, 今日, 明日, 昨日, 成功, 早退), so only a human pass can separate
+those from real gaps. The five genuine gaps listed before are **all translated now**:
+`登录序列号`, `获取课程评论错误`, `获取Sport Banner`, `高等数学`, `发布于 今天`. No orphan keys
+remain — a key cannot exist in one locale only.
 
-Most of the 17 iOS gaps are the junk strings above — deleting them closes most of the gap. The
-genuine ones: 登录序列号, 获取课程评论错误, 获取Sport Banner, 高等数学, 发布于 今天.
+**Android** — 976 `<string>` entries in `values/` across 24 files against 968 in each of
+`values-en/` and `values-ja/`. All 8 apparent gaps are legitimate: `translatable="false"` data and
+format strings (`library_default_building_info`, `library_location_format`), language names
+(`language_english`, `language_japanese`, `language_simplified_chinese`), the proper noun
+`app_name`, and two strings that exist in the module that owns them (`automatic_tip` in
+`feature/automatic`, `privacy_help` in `feature/my`) as well as in `app`.
 
 ### 7.6 Hardcoded strings
 
-175 sites across 59 production files on iOS, 3 on Android. See [§6](#6-localization-requirements).
+150 sites across 55 files on iOS (128 in production code across 47 files; 22 in fixtures,
+previews and debug-only views) and **79 sites across 19 files on Android**, measured with the same
+rule on both: a CJK literal counts unless it is routed through the platform's localization system,
+is a log/diagnostic argument, is a parse / compare / mapping key, or sits inside a `@Preview`
+composable. See [§6](#6-localization-requirements).
+
+Android's 79, by file:
+
+| File | Sites |
+| --- | --- |
+| `core/foundation/…/bean/library/BookingVO.kt` | 15 |
+| `core/configuration/…/CCKVDefaultValue.kt` | 14 |
+| `core/foundation/…/bean/ResponseBean.kt` | 14 |
+| `core/foundation/…/utils/DateTimeUtils.kt` | 8 |
+| `core/network/…/standard/response/HamResponse.kt` | 5 |
+| `core/foundation/…/utils/BiometricUtils.kt` | 4 |
+| `core/ui/…/toast/ToastManager.kt` | 3 |
+| `data/cas/…/model/BusLine.kt` | 3 |
+| 11 more files | 13 |
+
+Excluded from that 79: 30 log arguments, 17 parse/compare literals, 12 mapping branches
+(`"信息馆" -> stringResource(…)`), 12 preview-only literals, and one 51-entry keyword table
+(`WeatherTranslationHelper.kt`, which maps server weather strings to `R.string` ids).
+
+The 12 heaviest iOS sites:
+
+| Site | Copy |
+| --- | --- |
+| `Ham/shared/business/library/service/jsq/LibraryModel.swift:49-56` | 8 booking status names (预约 / 履约中 / 暂离 / 已结束 / 已取消 / 失约 / 早退 / 未签退) |
+| `Ham/shared/basic/model/vo/response/Response.swift:53,55,89,91,93,95,101` + `Ham/shared/basic/request/response/HamResponse.swift:35,37,39,41` | 11 error strings |
+| `Ham/shared/business/education/EducationRequestHelper.swift:43,65,79,85,108,127` | 6× 登录失败 + 6× 请重新登录 |
+| `Ham/shared/business/cas/CasRequestHelper.swift:109,115,146,153,160` | 5× 解析文档失败 |
+| `Ham/iOS/ui/library/main/component/LibraryMainViewCurrentBookingCard.swift:61,63,65,67` | 4 hardcoded map queries (`武汉大学信息学部图书馆`, …) |
+| `Ham/iOS/ui/my/component/card/MyUserCenterCard.swift:48` | `Text(vm.isCasLogin ? "管理信息门户设置" : "登录信息门户")` |
+| `Ham/iOS/ui/user-center/scan/QrCodeLoginView.swift:28,30,54` | 确认登录 / 返回 / 确定在电脑上登录Ham吗 |
+| `Ham/iOS/ui/schedule/insert/ScheduleInsertView.swift:41,142,279`, `ScheduleInsertMoreDataView.swift:43`, `group/ScheduleGroupEditView.swift:38` | TextField prompts and navigation titles (输入日程名称 / 添加日程 / 编辑日程 / 输入地点(可选) / 名称) |
+| `Ham/iOS/ui/score/ScoreViewModel.swift:51,59,72` | FaceID `localizedReason` and the two failure strings (保护你的成绩数据 / 请重新验证 / 你已开启成绩保护，请开启生物认证权限) |
+| `Ham/iOS/ui/library/book/detail-book/component/LibraryDetailBookViewHeader.swift:44`, `LibrarySelectSeatView.swift:111` | `Text(LocalizedStringKey(… ?? "请选择图书馆"))` — the literal is a `String`, so the wrapper does not localise it |
+| `Ham/iOS/ui/sport/select-area/common/SportSelectAreaViewHeader.swift:25` | `Text(LocalizedStringKey(em.selectedSportType?.title ?? "请选择运动类别"))` |
+| `Ham/iOS/ui/library/main/component/LibraryMainViewCurrentBookingCard.swift:111` | `Text(expand ? "收起" : "展开")` |
 
 ### 7.7 Unreachable copy
 
@@ -559,7 +644,7 @@ Neither side composes any of them. Delete, and keep the plain register.
 
 - [ ] Every user-visible string comes from a strings file — nothing hardcoded.
 - [ ] The string lives in exactly one catalog. If a second target needs it, reference rather
-      than duplicate — see [§5.1](#51-ios-has-six-catalogs-not-one).
+      than duplicate — see [§5.1](#51-ios-has-five-catalogs-not-one).
 - [ ] The key follows `<module>_<element>[_<qualifier>]` in snake_case, ASCII only.
 - [ ] The key describes the string's **role**, not its current wording.
 - [ ] Added to **all three** locales in the same commit.

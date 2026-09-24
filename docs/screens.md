@@ -84,9 +84,9 @@ overlay: collapsed nav title (alpha ramp) · pull-to-refresh indicator
 
 | Property | iOS | Android | Normative |
 | --- | --- | --- | --- |
-| Title text / type | `NOW`→`状态` `IOS/StatusView.swift:25`, `LS:9` / `.largeTitle.bold()` 34 `IOS/component/view/StatusTitleView.swift:18` | `status_title` `AOS/StatusView.kt:137`, `STR:4` / `32.sp` Bold `AOS/StatusContainerView.kt:106-107` | `状态` · **34 / Bold** |
+| Title text / type | `NOW`→`状态` `IOS/StatusView.swift:25`, `LS:common.status` / `.largeTitle.bold()` 34 `IOS/component/view/StatusTitleView.swift:18` | `status_title` `AOS/StatusView.kt:174`, `STR:4` / `32.sp` Bold `AOS/StatusContainerView.kt:106-107` | `状态` · **34 / Bold** |
 | Top inset | `statusBar + 28` `StatusView.swift:24` | `64.dp` `StatusContainerView.kt:98` | `statusBar + 28` |
-| Title → cards | `30` `StatusView.swift:26` | `10`+`32`=42 `StatusContainerView.kt:115`, `AOS/StatusView.kt:175` | **30** |
+| Title → cards | `30` `StatusView.swift:26` | `10`+`32`=42 `StatusContainerView.kt:115`, `AOS/StatusView.kt:213` | **30** |
 | Title colour | flips white/black by luminance `StatusView.swift:39-44` | fixed; hook never passed `StatusContainerView.kt:53-55,108` | **flips with luminance** |
 | Collapsed title | `ToolbarItem(.title)`, iOS 26+, `scrollY > 7` `StatusView.swift:105,134-142` | custom bar, alpha `(1+(y−dY)/dY)`∈0…1, 20/Bold `StatusContainerView.kt:120-140` | **17 / Bold**, alpha ramp, platform chrome (`design-system.md` §6) |
 | Top scrim | `ham_bg_b2` masked gradient, `statusBar+45`, iOS<26, iPad 400 `StatusView.swift:53-68` | solid `ham_bg_b1`@0.7 `StatusContainerView.kt:126` | `surface.primary`@0.7 · `statusBar+45` · all versions |
@@ -100,7 +100,7 @@ overlay: collapsed nav title (alpha ramp) · pull-to-refresh indicator
 server list, one random pick **per day**, sticky for the session: keep the cached URL while it is
 still offered and wait **10 s** before swapping on a session's first load
 (`IOS/component/vm/StatusBackgroundViewModel.swift:63-76`; Android re-randomises per process,
-`AOS/StatusViewModel.kt:60`) · **not tappable** · failure is silent, no error chrome.
+`AOS/StatusViewModel.kt:62-64`) · **not tappable** · failure is silent, no error chrome.
 
 **Pull-to-refresh** — threshold **128** (iOS `IOS/component/view/StatusUpdateView.swift:15,57`;
 Android `300f` px `StatusContainerView.kt:158,170`) · indicator is platform-native: iOS keeps the
@@ -134,20 +134,20 @@ renders title + photo + background only.
 | Card | Condition | Score | Cite |
 | --- | --- | --- | --- |
 | weather | loaded, commute window 06:00–09:00 / 13:00–14:00 / 16:30–18:30 | 120 | `IOS/card/weather/StatusWeatherCardViewModel.swift:160` |
-| weather | loaded otherwise | 10 | `:162`; `AOS/component/weather/WeatherCardViewModel.kt:84` |
+| weather | loaded otherwise | 10 | `:162`; `AOS/component/weather/WeatherCardViewModel.kt:89` |
 | weather | no location permission, no data | 100 | `…StatusWeatherCardViewModel.swift:80` |
 | weather | fetch failed, no data | 60 | `:128` |
-| library | active booking (reserve / checkIn / away) | 60 | `IOS/card/library/StatusLibraryCardViewModel.swift:96`; `AOS/component/library/LibraryCardViewModel.kt:67` |
+| library | active booking (reserve / checkIn / away) | 60 | `IOS/card/library/StatusLibraryCardViewModel.swift:93`; `AOS/component/library/LibraryCardViewModel.kt:67` |
 | library | booking ended today | 20 | `StatusLibraryCardViewModel.swift:111` |
 | library | request error | 30 | `:88` |
 | course | week has courses | 50 | `IOS/card/course/StatusCourseCardViewModel.swift:136` |
 | schedule | has an upcoming item / none | 60 / 5 | `IOS/card/schedule/StatusScheduleCardViewModel.swift:65` |
 | bus | stop resolved | 2 | `IOS/StatusContentViewModel.swift:57` |
 | sport | has an order | 60 | *new — see Divergence* |
-| any | nothing to show | −1 | `StatusLibraryCardViewModel.swift:114`; `StatusCourseCardViewModel.swift:132-133`; `IOS/card/bus/StatusBusCardViewModel.swift:69,163-169` |
+| any | nothing to show | −1 | `StatusLibraryCardViewModel.swift:111`; `StatusCourseCardViewModel.swift:132-133`; `IOS/card/bus/StatusBusCardViewModel.swift:69,163-169` |
 
 `Divergence:` Android publishes nothing for course (`AOS/component/course/CourseCardViewModel.kt:76`),
-weather-on-failure (`WeatherCardViewModel.kt:84`) or bus
+weather-on-failure (`WeatherCardViewModel.kt:79-83`) or bus
 (`AOS/component/bus/StatusViewBusCardViewModel.kt:199-202`), so those cards sink instead of
 surfacing; iOS sport never publishes (frozen at 1, `IOS/card/sport/StatusSportCardVM.swift`). Both
 tie-breaks are unstable. Android's bus cut-off is 100 km vs iOS 20 km
@@ -177,7 +177,7 @@ Band colours — library `IOSSH/Color+Ham.swift:36` · `AOSUI/common/ui/config/C
 #1B5E20 `Color+Ham.swift:41` · `Color.kt:90-91`; schedule #01579B `Color+Ham.swift:42` ·
 `Color.kt:93-94`; bus #A2845E `Color+Ham.swift:40` · `Color.kt:87-88`; sport #34C759
 `Color+Ham.swift:37` · `Color.kt:78-79`; weather #FF9500
-`IOS/card/weather/StatusWeatherCard.swift:15` · `AOS/component/weather/WeatherCardView.kt:90`.
+`IOS/card/weather/StatusWeatherCard.swift:15` · `AOS/component/weather/WeatherCardView.kt:88`.
 
 `Divergence:` iOS writes stock UIKit colours (`Color.blue` / `.brown` / `.green` / `.orange`) for
 library, bus, sport and weather instead of the brand tokens — promote all four to named tokens.
@@ -194,24 +194,28 @@ Not a status card — a solid error pill pinned above the scored list.
 ```
 
 **Blocks** — 1. **warning icon** (always; filled triangle-exclamation, `icon.md` 24 —
-`IOS/card/cas/StatusCasAlertCard.swift:13`, `AOS/component/cas/CasErrorCardView.kt:53`) ·
+`IOS/card/cas/StatusCasAlertCard.swift:13`, `AOS/component/cas/CasErrorCardView.kt:65`) ·
 2. **message** `信息门户登录失败` 17 / Regular (`:14`) · 3. **spacer** (`:18`) ·
 4. **action pill** `重新登录` — 12 / Bold, `surface.secondary` text on a white@0.70 pill, r6,
-pad h8 v4; **tappable** → CAS settings (`:19-24`, `CasErrorCardView.kt:45-48`).
+pad h8 v4; **tappable** → CAS settings (`:19-24`, `CasErrorCardView.kt:57-60`) — Android already
+ships the pill as `caption` on white@0.70 at r8 / pad 6 (`CasErrorCardView.kt:74-84`).
 
 | Element | iOS | Android | Normative |
 | --- | --- | --- | --- |
-| Fill / radius | `Color.red` / `12` `:29-30` | `ham_red` / `16` `CasErrorCardView.kt:44`, `AOSUI/common/ui/component/Card.kt:53` | `feedback.error` / **12** |
-| Padding / icon→text gap | h8 / v8 `:27-28` / `4` `:12` | `16` `Card.kt:48` / `4.dp` `:50` | **h12 / v8** / 4 |
-| Message | body, `.white` `:14,16` | `caption` 12.sp `:54` | **17 / Regular, white** |
-| Tap target | pill only `:19` | whole card `:45-48` | **whole card** |
+| Fill / radius | `Color.red` / `12` `:29-30` | `ham_red` `CasErrorCardView.kt:56` / `16` `core/ui/container/card/Card.kt:53` | `feedback.error` / **12** |
+| Padding / icon→text gap | h8 / v8 `:27-28` / `4` `:12` | `16` `core/ui/container/card/Card.kt:48` / `4.dp` `CasErrorCardView.kt:62` | **h12 / v8** / 4 |
+| Message | body, `.white` `:14,16` | `caption` 12.sp `CasErrorCardView.kt:68` | **17 / Regular, white** |
+| Tap target | pill only `:19` | whole card `CasErrorCardView.kt:57` | **whole card** |
 
-**Strings:** `信息门户登录失败` (`LS:556`) · `重新登录` (`LS:370`).
+**Strings:** `信息门户登录失败` (`LS:status.infoPortalLoginFailed`/`STR:5`) · `重新登录` (`LS:common.logInAgain`/`STR:6`).
 **States:** CAS valid → absent; CAS invalid → present. No loading or empty state.
 
-`Divergence:` Android folds message and action into one string `请重新登录信息门户` (`STR:5`) with
-no pill. iOS scopes `.white` to the outer `HStack` (`:16`), so the pill label is white-on-white —
-a contrast defect. Android's icon has `contentDescription = null`.
+`Divergence:` Android ships the same two strings (`信息门户登录失败` `STR:5`, `重新登录` `STR:6`) and
+also renders the action as a pill (`CasErrorCardView.kt:74-84`), but at `caption` 12 with r8 / pad 6
+`ham_text_primary` on white@0.70, and makes the whole card the tap target (`:57`) instead of only the
+pill. Android's icon has `contentDescription = null`. iOS scopes `.white` to the inner `HStack`
+holding the icon and message (`:12-16`), so the pill label keeps its default colour — there is no
+white-on-white defect.
 
 ### 1.5 Weather (天气)
 
@@ -241,7 +245,7 @@ inline spinner beside the temperature once data exists — `:24-29`, `:83-86`,
 `WeatherCardView.kt:147-166`) · 4. **brief block** (when data exists; gap 2 — `:81-93`, `:158-197`) ·
 5. **forecast grid** (when the list is non-empty; **5 rows**, 3 columns — `:100-137`,
 `WeatherCardView.kt:201-285`; `.prefix(5)` / `.take(5)` at `StatusWeatherCardViewModel.swift:177`,
-`WeatherRequestHelper.kt:78`) · 6. **attribution** (whenever the body renders — `StatusWeatherCard.swift:30-37`).
+`WeatherRequestHelper.kt:80`) · 6. **attribution** (whenever the body renders — `StatusWeatherCard.swift:30-37`).
 
 | Element | iOS | Android | Normative |
 | --- | --- | --- | --- |
@@ -254,13 +258,19 @@ inline spinner beside the temperature once data exists — `:24-29`, `:83-86`,
 | Day / night icons / column gap | `sun.max.fill` / `moon.fill` @12 `:121-132` / `8` `:126` | `WbSunny` / `ModeNight` @12 `:325-348` / `8.dp` `:338` | `icon.xs` 12 / 8 |
 | Forecast temperatures | body `:124,133` | Bold 16.sp `:333,350` | 17 / Bold, tabular |
 | Attribution | `.caption2` 11, gray, WeatherKit URL `:34-35` | absent | 11 / Regular `text.tertiary`; **URL follows the data source** |
-| No-permission state | reuses the error banner `StatusWeatherCardViewModel.swift:77` | own body `WeatherCardView.kt:359-371` | dedicated body: message 12 / Regular + `去授权` 17 / Regular `accent`, top pad 4 |
+| No-permission state | reuses the error banner `StatusWeatherCardViewModel.swift:77` | reuses the same error banner `WeatherCardView.kt:93-124` (retry `status_retry` `:122`) — the message is `status_weather_fetch_error` for every failure, set at `WeatherCardViewModel.kt:82` | dedicated body: message 12 / Regular + `去授权` 17 / Regular `accent`, top pad 4 |
 
-**Strings:** `天气` (`LS:107`/`STR:6`) · `重试` (`LS:298`/`STR:7`) · `未获取地理权限` (`STR:8` — iOS
-`未获取地理位置权限` `LS:715`) · `去授权` (`STR:9`) · `获取地理位置失败` (`STR:15` — iOS
-`获取地理位置遇到了错误` `LS:786`) · `获取天气数据时遇到了异常` (`STR:14`) ·
-`今日`/`明日`/`昨日`/`周%1$s` (`LS:526,691,695,608`; `STR:10-13`) · ` Weather` (hardcoded
-`StatusWeatherCard.swift:33`) — localize and drop the glyph.
+**Strings:** `天气` (`LS:status.weather`/`STR:7`) · `重试` (`LS:common.retry`/`STR:8`) · `未获取地理位置权限` (iOS
+`LS:status.locationPermissionNotGranted`, set at `StatusWeatherCardViewModel.swift:77`) · `获取地理位置遇到了错误` (iOS `LS:status.errorGettingLocation`,
+`:258`) · `获取天气数据时遇到了异常` (`STR:13`, set at `WeatherCardViewModel.kt:82` — Android's only
+weather error message) — Android's `无法获取地理位置权限` / `获取地理位置失败`
+(`core/foundation/location_strings.xml:2,3`) are raised by `LocationManager.kt:160,193,277`, not by
+this card · `今日` (`LS:status.today`) · `明日` (`LS:status.tomorrow`) · `昨日`
+(`LS:status.yesterday`; Android `STR:9,11,10`) · `周%1$s` (`STR:12`; iOS has no
+weekday format — it maps the weekday to `shared.dateUtils.mon…sun`
+`StatusWeatherCardViewModel.swift:217-232`) · `去授权` (**normative only**: neither client ships an
+action string; both reuse the retry banner) · ` Weather` (hardcoded `StatusWeatherCard.swift:33`)
+— localize and drop the glyph.
 
 **States:** cold start → render the persisted cache, else block spinner · loading → block or inline
 spinner · loaded → brief + forecast + attribution · no permission → permission body · location or
@@ -300,7 +310,7 @@ time + `开始` + countdown — `StatusLibraryCardReserveInfoView.swift:19-41`,
 `LibraryCard.kt:262-277`) · 4. **checked-in block** (`.checkIn || .away` only; `已学习{time}` + bar
 + begin/end labels — `StatusLibraryCardCheckInInfoView.swift:18-33`, `LibraryCard.kt:313-332`) ·
 5. **divider** (always; 1 px `surface.tertiary`, v-pad 4 — `StatusLibraryCard.swift:65`,
-`LibraryCard.kt:153`) · 6. **seat block** (always; seat number, location, `date begin-end`, gap 0 —
+`LibraryCard.kt:154`) · 6. **seat block** (always; seat number, location, `date begin-end`, gap 0 —
 `:67-75`, `LibraryCard.kt:154-171`) · 7. **`变更预约` chip** (always; trailing; **tappable** →
 modify booking — `:77-90`, `LibraryCard.kt:173-186`). Rows 2–4 are mutually exclusive; nothing
 else is tappable.
@@ -319,12 +329,13 @@ else is tappable.
 | Content gaps / inter-card | outer `10` `:52` / 0 (multi-booking) `:50` | 8 after away, 8 before bar `:145,317` / `8.dp` `:87-91` | outer **8** / 8 |
 | Error title / message | `加载时遇到了错误` + 12 `:37-39` | 16 Bold + 12 `:115-119` | 17 / Bold + 12 / Regular `text.secondary` |
 
-**Strings:** `图书馆` (`LS:152`/`STR:63`) · `变更预约` (`LS:129`/`STR:66`) · `%@离开`
-(`LS:474`/`STR:65`) · `开始` (`LS:102`/`STR:67`) · `不久后` (`LS:508`) · `加载时遇到错误`
-(`STR:64` — iOS `加载时遇到了错误` `LS:101`) · `超过%1$d分钟` (`LS:817`/`STR:68`) ·
-`超过不到1分钟` (`LS:89`/`STR:69`) · `还有不到一分钟` (`LS:11`/`STR:70`) · `还有%1$d分钟`
-(`LS:586`/`STR:71`) · `还有%1$d小时` (`LS:587`/`STR:72`) · `已学习%1$s` (`LS:639`/`STR:75`) ·
-`%1$d分钟` (`LS:93`/`STR:74`) · `已结束` (`LS:644`) · `累计学习%1$d分钟` (`LS:768`).
+**Strings:** `图书馆` (`LS:common.library`/`STR:81`) · `变更预约` (`LS:status.modifyReservation`/`STR:84`) · `%@离开`
+(`LS:status.leftAt`/`STR:83`) · `开始` (`LS:status.beginsAt`/`STR:85`) · `不久后` (`LS:status.soon`) · `加载时遇到错误`
+(`STR:82` — iOS `加载时遇到了错误` `LS:status.errorOccurredWhenLoading`) · `超过%lld分钟` (`LS:status.overMinutes`) / `超过%1$d分钟` (`STR:86`) ·
+`超过不到1分钟` (`LS:status.lessThanAMinuteAgo`/`STR:87`) · `还有不到一分钟` (`LS:status.lessThanAMinute`/`STR:88`) · `剩余%lld分钟`
+(`LS:status.minutesRemaining`) / `还有%1$d分钟` (`STR:89`) · `剩余%lld小时` (`LS:status.hoursRemaining`) /
+`还有%1$d小时` (`STR:90`) · `已学习%@` (`LS:status.studied`) / `已学习%1$s` (`STR:93`) ·
+`%lld分钟` (`LS:status.minutes`) / `%1$d分钟` (`STR:92`) · `已结束` (`LS:common.ended`) · `累计学习%lld分钟` (`LS:status.studiedMinutesInTotal`).
 
 **States:** cached booking list rendered before the first network call · loading spinner · error
 (title + message) · empty → hidden (score −1) · **ended** (today's bookings all finished: `已结束`
@@ -379,8 +390,8 @@ Tip variants: `%@后上%@` · `正在上%@` (+ in-class bar and from/to times) �
 | --- | --- | --- | --- |
 | Tip primary / secondary | 17 Bold `…HeaderTipView.swift:38` / `.caption` 12 `:52,62` | 16 Bold `CourseCard.kt:199` / `caption` 12 `:275-299` | **17 / Bold** / 12 / Regular |
 | Tip stack gap | `4` `:54` | `4.dp` `:267,281` | 4 |
-| In-class bar / value | `ProgressView`, tint `displayColor` `:55-56` / unclamped `:175` | h4 r2, course colour `:286-288` / `min(1f,…)` `CourseCardViewModel.kt:156` | h 4, r 2, track `surface.tertiary`, course-colour fill / **clamped to 1** |
-| Week-grid bar | h4 r2, track gray@0.15, `▲` @12 gray@0.8 `…ProgressView.swift:56-71` | absent (`weekProgress` never read, `CourseCardViewModel.kt:135`) | **h 4, r 2, track `surface.tertiary`** |
+| In-class bar / value | `ProgressView`, tint `displayColor` `:55-56` / unclamped `:175` | h4 r2, course colour `:286-288` / `min(1f,…)` `CourseCardViewModel.kt:153` | h 4, r 2, track `surface.tertiary`, course-colour fill / **clamped to 1** |
+| Week-grid bar | h4 r2, track gray@0.15, `▲` @12 gray@0.8 `…ProgressView.swift:56-71` | absent (`weekProgress` never read, `CourseCardViewModel.kt:43,132`) | **h 4, r 2, track `surface.tertiary`** |
 | Row: colour bar / gap | `6 × ∞`, r3 `StatusCourseCardCourseItem.swift:43-45` / `6` `:42` | `6.dp × ∞`, r3 `CourseCard.kt:137-141` / `4.dp` `:149` | 6 wide, **r 3** / **6** |
 | Row: name / desc | 17 Bold / 12 `:52-55` | 16 Bold / 12 `:152-153` | **17 / Bold** / 12 / Regular |
 | Row: text active / ended | `Color.primary` / `Color.gray` `:58-59` | `ham_text_primary` / `ham_text_secondary` `:151` | `text.primary` / `text.secondary` |
@@ -392,14 +403,12 @@ Tip variants: `%@后上%@` · `正在上%@` (+ in-class bar and from/to times) �
 | Toggle action | `withAnimation` + full `doUpdate()` `:77-86` | flag flip + list recompute only `:374-375` | flag flip **+ full refresh** of current class and progress |
 | `没有其它课程` | 12, gray, **above** the list `:49-51` | 12, secondary, **below** `:362-366` | 12 / Regular `text.secondary`, **below** the rows |
 
-**Strings:** `课程` (`LS:115`/`STR:44`) · `没有其它课程` (`LS:380`/`STR:59`) · `切换到周视图`
-(`STR:61`) · `切换到日视图` (`STR:60`) · `%@后上%@` (`LS:472`/`STR:55`) · `正在上%@`
-(`LS:359`/`STR:56`) · `明日早八` (`LS:692`/`STR:57`) · `明日第一节课将在%@后开始`
-(`LS:693`/`STR:58`) · `下周无课程` (`LS:374`/`STR:50`) · `本周无课程` (`LS:375`/`STR:51`) ·
-`今日课程已上完` (`STR:54`) · `本周课程已上完` → `本周的课程已经全部结束啦～辛苦啦！💪` (`LS:122`) ·
-`今日无课，好好休息` (`LS:377`/`STR:52`) · `明日无课，好好休息` (`LS:376`/`STR:53`) · `%1$d节`
-(`LS:354`/`STR:45`) · `%1$d-%2$d节` (`STR:46`) · `%1$d小时` (`LS:481`/`STR:47`) · `%1$d分钟`
-(`LS:479`/`STR:48`) · `不到1分钟` (`LS:379`/`STR:49`) · `周%1$s` (`STR:13`).
+**Strings:** `课程` (`LS:main.courses`/`STR:62`) · `没有其它课程` (`LS:status.noOtherCourses`/`STR:77`) · `切换到周视图`
+(`STR:79`) · `切换到日视图` (`STR:78`) · `%@后上%@` (`LS:status.untilStarts`/`STR:73`) · `正在上%@`
+(`LS:status.currentlyIn`/`STR:74`) · `明日早八` (`LS:common.tomorrow8AM`/`STR:75`) · `明日第一节课将在%@后开始`
+(`LS:status.tomorrowSFirstClassStarts`/`STR:76`) · `下周无课程` (`LS:status.noClassesNextWeek`/`STR:68`) · `本周无课程` (`LS:status.noClassesThisWeek`/`STR:69`) ·
+`今日课程已上完` (`STR:72`) · `本周课程已上完` → `本周的课程已经全部结束啦～辛苦啦！💪` (`LS:status.allClassesForThisWeek`) ·
+`今日无课，好好休息` (`LS:status.noClassesTodayHaveA`/`STR:70`) · `明日无课，好好休息` (`LS:status.noClassesTomorrowHaveA`/`STR:71`) · `%@节` (`LS:common.lesson`) / `%1$d节` (`STR:63`) · `%1$d-%2$d节` (`STR:64`) · `%lld小时` (`LS:status.hours`) / `%1$d小时` (`STR:65`) · `%lld分钟` (`LS:status.minutes`) / `%1$d分钟` (`STR:66`) · `不到1分钟` (`LS:status.lessThan1Minute`/`STR:67`) · `周%1$s` (`STR:12`).
 
 **States:** no loading, error or screen-level empty. Hydrate from a persisted cache before first
 paint and re-rank immediately; week empty → hidden (score −1).
@@ -454,9 +463,9 @@ when non-empty `:178-182`, related-course pill when non-empty `:185-201`) · 4. 
 | `无日程` / `其它日程` | 12 gray `:35-37` / 12 inherited `:62-67` | *absent* | 12 / Regular `text.secondary` / 12 / Regular **`accent`** |
 | Row padding / header→hero / content gaps | v `4` `:108` / top pad `8` `:206` / `12` outer `:27` | *absent* | v 4 / 8 / **8** outer |
 
-**Strings:** `日程` (`LS:688`/`STR:42`) · `无日程` (`LS:685`) · `其它日程` (`LS:569`) ·
-`未添加日程` (`LS:713`) · `本周待完成%1$d项日程` (`LS:718`) · `待完成%1$d项日程` (`LS:656`) ·
-`%@剩余` (`LS:471`) · `%@前` (`LS:470`) · `分钟` (`LS:574`) · `小时` (`LS:633`) · `天` (`LS:628`).
+**Strings:** `日程` (`LS:status.schedule`/`STR:44`) · `无日程` (`LS:status.noSchedule`) · `其它日程` (`LS:status.otherSchedules`) ·
+`未添加日程` (`LS:status.noScheduleAdded`) · `本周待完成%lld项日程` (`LS:status.pendingSchedulesThisWeek`) · `待完成%lld项日程` (`LS:status.pendingSchedules`) ·
+`%@剩余` (`LS:common.remaining`) · `%@前` (`LS:common.ago`) · `分钟` (`LS:common.minute`) · `小时` (`LS:common.hour`) · `天` (`LS:schedule.insert.day`).
 
 **Data & cadence:** local Realm store, no network. All items whose `end` is nil or in the future,
 ascending by `begin`; the week subset is bounded by Monday-start `begin − (weekday−1)` … `+7d`.
@@ -466,11 +475,18 @@ Re-query every **10 s** (`StatusScheduleCardViewModel.swift:28-57,76-88`). Count
 lands) · no error (replace the force-`try!` at `StatusScheduleCardViewModel.swift:45`) · two
 empties (summary `未添加日程`, body `无日程`).
 
-`Divergence:` Android's `ScheduleCard.kt` is an empty stub with zero call sites and no `Schedule`
-branch in the render `when` (`AOS/StatusView.kt:208`) — the card does not exist there. iOS bugs:
-`:125` formats `待完成%lld项日程` from `weekScheduleList` inside a branch reachable only when that
-list is empty (always reads `待完成0项日程`); `:34` shows `无日程` even with exactly one schedule;
-`:213-242` is a dead duplicate countdown helper.
+`Divergence:` Android ships the card — `AOS/component/schedule/ScheduleCard.kt` is 312 lines composed at
+`AOS/StatusView.kt:247` from `ScheduleCardViewModel` (Realm), with its own hero countdown (50 bold,
+`:58,194-196`), a 5-item threshold (`:52,101-105`) and a 剩余 suffix once an item is under way
+(`:297-310`). An earlier revision of this paragraph called it an empty stub with zero call sites and
+no `Schedule` branch in the render `when`; that was wrong on both counts — the branch is at
+`AOS/StatusView.kt:246-248`. What actually differs: Android's middle summary branch counts
+`scheduleList` (`ScheduleCard.kt:139-142`) where iOS counts `weekScheduleList`, and Android gates its
+rows on `scheduleList.size > 1` (`:82`) where iOS gates on `weekScheduleList.count > 1 &&
+scheduleList.count > 1`. iOS bugs: `:125` formats `待完成%lld项日程` from `weekScheduleList` inside a
+branch reachable only when that list is empty (always reads `待完成0项日程`); `:34` shows `无日程` even
+with exactly one schedule. `:213-242` is not dead code — `ScheduleUIUtils.getScheduleLeftTimeInfo` is
+called at `:89` and `:156`.
 
 ### 1.9 Bus (校车)
 
@@ -508,7 +524,7 @@ resolved; name, distance, inline spinner while refreshing, Live Activity menu on
 | --- | --- | --- | --- |
 | Content padding | `0`, blocks pad h12 `StatusBusCard.swift:20` | `16.dp` `AOS/component/CommonStatusCard.kt:53` | **0**; blocks apply h12 |
 | Stop name / distance | 17 Bold `:51-52` / `"{m}m"` no prefix `:53-54` | 16 Bold `:86-90` / `距你%1$dm` 12.sp `:91-98` | 17 / Bold / **`距你%1$dm`** 12 / Regular `text.secondary` |
-| Line-name badge | 12 Bold accent on accent@0.2, pad h8 v4, r4 `StatusBusCardLineInfoView.swift:18-27` | plain 16 Bold `ham_darkBlue` `StatusViewBusCard.kt:131` | chip r6, pad h6 v4, 12 / Bold, `accent` on `accent`@0.10 |
+| Line-name badge | 12 Bold accent on accent@0.2, pad h8 v4, r4 `StatusBusCardLineInfoView.swift:18-27` | plain 16 Bold `ham_darkBlue` `StatusViewBusCard.kt:325` | chip r6, pad h6 v4, 12 / Bold, `accent` on `accent`@0.10 |
 | Arrival headline | `title` rounded: `N 站`/`已到站`/`即将到达` `:50-74` | single `N站`/`未发车` 16.sp `:137-154` | `title` **28 / rounded**: `已到站` at 0, `即将到达` at 1, else `%1$d站`; `未发车` in `body` |
 | Bus-count glyphs / `当前…站` / route | one `bus` @8 per bus `:37-46` / `.caption2` 11 `:66-69` / 11, gap 3 `:29-35` | absent / absent / absent | **one bus glyph per approaching bus** / 11 / Regular `text.secondary` / 11 / Regular, gap 4 |
 | Expanded row height / columns | intrinsic; 12 spacer icon→pill `:130-131,155-156` / 56 and 64 `:145,171` | `28.dp` fixed `:167,180-188` / counts pad-end 6, bus pad-start 6 `:176-270` | **28** / **horizontal track** h 4, r 2, `text.secondary`@0.2 |
@@ -518,11 +534,11 @@ resolved; name, distance, inline spinner while refreshing, Live Activity menu on
 | Expansion persistence | survives refresh `StatusBusCardViewModel.swift:184-194` | lost (`remember`) `StatusViewBusCard.kt:126` | **survives data refresh** |
 | Live Activity button | `Menu` `line.3.horizontal` @14, gray@0.2, r6 `StatusBusCardLiveActivityButtonView.swift:18-44` | absent | iOS only — a platform rule, not a gap |
 
-**Strings:** `校巴` (`LS:731`/`STR:33`) · `重试` (`LS:298`) · `获取地理位置异常` (`LS:785`) ·
-`更新校巴信息异常` (`LS:709`) · `站` (`LS:389`) · `%1$d站` (`LS:390`/`STR:36`) · `到达`
-(`LS:394`/`STR:39`) · `前往` (`LS:583`/`STR:40`) · `当前%@` (`LS:654`) · `当前` (`LS:653`/`STR:38`) ·
-`未发车` (`LS:712`/`STR:37`) · `已到站` (`LS:395`) · `即将到达` (`LS:396`) · `距你%1$dm` (`STR:34`) ·
-`加载时遇到了错误` (`STR:35`) · `把%@添加到实况活动` (`LS:669`) · `清除所有实况活动` (`LS:751`).
+**Strings:** `校巴` (`LS:common.campusBus`/`STR:15`) · `重试` (`LS:common.retry`) · `获取地理位置异常` (`LS:status.locationError`) ·
+`更新校巴信息异常` (`LS:status.failedToUpdateBusInfo`) · `站` (`LS:common.stop`) · `%lld站` (`LS:common.stops`) / `%1$d站` (`STR:18`) · `到达`
+(`LS:common.arrive`/`STR:21`) · `前往` (`LS:status.headingTo`/`STR:22`) · `当前%@` (`LS:status.now`) · `当前` (`LS:status.current`/`STR:20`) ·
+`未发车` (`LS:common.notDeparted`/`STR:19`) · `已到站` (`LS:common.arrived`) · `即将到达` (`LS:common.arrivingSoon`) · `距你%1$dm` (`STR:16`) ·
+`加载时遇到了错误` (`STR:17`) · `把%@添加到实况活动` (`LS:status.addToLiveActivity`) · `清除所有实况活动` (`LS:status.clearAllLiveActivities`).
 
 **States:** loading (whole-card, then inline) · error (banner + `重试`) · location denied (banner) ·
 empty (band only) · hidden when logged out or more than **20 km** from campus
@@ -571,10 +587,12 @@ plus `请于%@-%@完成支付` (`:48`).
 | `去支付` | white on `.blue`, pad h8 v8, r6 `:56-61` | *absent* | filled: h 28, pad h12 v6, r6, `accent`, white 12 / Bold |
 | Content gaps / divider | `VStack` default `:17,21` / inside the unpaid block `:39` | *absent* | **8** / 1 px `surface.tertiary`, v-pad 4 |
 
-**Strings:** `运动` (`LS:829`; Android `sport_title` in `feature/sport` `STR:3`) · `去支付`
-(`LS:594`/`STR:38`) · `请于%@前完成支付` (`LS:802`/`STR:40`) · `当前未处于可支付时间`
-(`LS:655`/`STR:41`) · `请于%@-%@完成支付` (`LS:801`/`STR:42`) · status labels `未知` `待付款`
-`待使用` `使用中` `已使用` `已取消` `已退款` (`LS:883-889`; also hardcoded as lookup keys at
+**Strings:** `运动` (`LS:status.sports`; Android `sport_title` in `feature/sport` `STR:55`) · `去支付`
+(`LS:status.payNow`/`STR:60`) · `请于%@前完成支付` (`LS:common.pleasePayBefore`/`STR:56`) · `当前未处于可支付时间`
+(`LS:status.paymentNotAvailableNow`/`STR:57`) · `请于%@-%@完成支付` (`LS:common.pleasePayBetween`/`STR:58`) ·
+status labels `未知` `LS:common.unknown` · `待付款` `LS:common.pendingPayment` · `待使用`
+`LS:common.pendingUse` · `使用中` `LS:common.inUse` · `已使用` `LS:common.used` · `已取消`
+`LS:shared.bookingVO.canceled` · `已退款` `LS:common.refunded` (also hardcoded as lookup keys at
 `SportOrderDetail.swift:30-36` — move to typed `String(localized:)` sites).
 
 **States:** the card must be **state-gated, not data-gated** — keep it mounted and render an inline
@@ -696,7 +714,7 @@ Android per field (`:166-178`). 4 **Grade card** — conditional. 5 **Linked sch
 
 | Element | iOS | Android | normative |
 |---|---|---|---|
-| nav title · bg · pad · gap · card | `SCHEDULE_PREFERENCES` 课程设置 — `:24-25` · `ham_bg_b1Color` — `:23` · `16` — `:20` · `24` — `:15` · `HamCardView` 16/16, `b2`, title `.semibold`, subtitle `.caption` — `CardView.swift:22-23,:60-68` | `course_setting_title` — `:69` · `ham_bg_b1` — `NavigationView.kt:385` · `16.dp` — `:70` · `8.dp` — `:71` · `HamCardView` 16/16, title `bodyBold`, subtitle `caption` — `Card.kt:49,:53,:81-85` | 课程表设置 · `#F9F9F9` · 16 · 8 · 16/16 |
+| nav title · bg · pad · gap · card | `SCHEDULE_PREFERENCES` 课程设置 — `:24-25` · `ham_bg_b1Color` — `:23` · `16` — `:20` · `24` — `:15` · `HamCardView` 16/16, `b2`, title `.semibold`, subtitle `.caption` — `CardView.swift:22-23,:60-68` | `course_setting_title` — `:69` · `ham_bg_b1` — `NavigationView.kt:389` · `16.dp` — `:70` · `8.dp` — `:71` · `HamCardView` 16/16, title `bodyBold`, subtitle `caption` — `Card.kt:49,:53,:81-85` | 课程表设置 · `#F9F9F9` · 16 · 8 · 16/16 |
 | section headers · date row · chip | `.caption` 12 + `ham_text_t2Color` — `BasicSection.swift:19-20`, `UISection.swift:21-22`, `HelpSection.swift:16-17` · `DatePicker` `.labelsHidden()` — `:25-28`; semester `.caption` `.gray` — `:29-31` · none | none · `body` 16 label — `:82-86`; semester `caption` 12 — `:96-100` · `Gray@0.15f`, r 8, pad v6/h8 — `DatePickerButton.kt:43-52` | per-card titles · labelled row + chip, r 8 |
 | fetch row · preview | icon `arrow.up.right` `.system(20).semibold` — `:43`; circle `blue@0.1` `40×40` — `:44-49`; pad 8 — `:50`; frame 40 — `:51`; title `.semibold` — `:54-56`; subtitle `.caption` `.gray` — `:57-59`; chevron — `:63-64` · `200 × 200·ratio`, r `10` — `UISection.swift:27-28,:36-39`; 3 mock chips 40×120/80/160, r 5 — `:42-76`; top-bar chip 180×40, shadow r5 y2 — `:79-89` | `HamButton` + `body` 16 `ham_blue` — `:128-132` · width `200.dp`, height `width·ratio` — `BackgroundCard.kt:179-190`; chips `(200−16)/5+5` wide ×4/×3/×5, r 8 — `:185-227`; container pad 8 — `:200-205` | icon row + chevron · 200 wide, r 10 |
 | sliders · remove · choose | background `0...0.85` — `:95`; course `0.15...1` — `:105` · `REMOVE_BACKGROUND_IMAGE` red — `:121-123` · `CHOOSE_BACKGROUND_IMAGE` blue — `:128` | Material3, thumb+track `ham_blue` — `:104-107,:122-125`; stored inverted `1−alpha`, clamped `<= 0.95` — `:100-103,:118-121` · `course_background_remove_image` `body` `ham_red` — `:130-134` · `course_background_set_image` `body` `ham_blue` — `:83-87` | 0.05…1 each · red · blue, 16 |
@@ -770,7 +788,7 @@ uses `Bookmark`/`Person`/`Map` icons) → card `时间设置` (three button grid
 | labels/icons · text field | `.frame(width: 64, alignment: .leading)` — `CourseAddBasicInfoView.swift:21,:27,:33`; no icons · `TextField` + `RoundedBorderTextFieldStyle` — `:22-23,:28-29,:34-35` | none; `Bookmark`/`Person`/`Map` tint `ham_gray`, gap 8 — `CourseEditViewInfoCell.kt:32-54` · `HamTextField` r `8.dp`, `b2`, `border(1.dp, ham_lightGray)`, pad 8 — `TextField.kt:42-52,:74-79` | icons, gap 8 · r 8, 1 dp border, pad 8 |
 | slot buttons · labels · dividers | `36×36`, selected `blue@0.2` / unselected `gray@0.1`, `CustomUnevenRoundedRectangle` (end cells r `8`); `GridItem(adaptive 36, gap 0)`, row gap `8` — `CourseAddTimeSettingView.swift:80-84,:22-24,:29,:46` · `周数`/`节数`/`星期` plain `Text` — `:21,:38,:55` · `Divider` — `:36,:53` | `Box 32.dp`, r `8.dp`, `border(1.dp, ham_lightGray)`, background `vm.color` when selected with `animateColorAsState`; `FlowRow` gap `8.dp`; text colour by `isHSLLightColor(bg)` — `CourseEditViewTimeCell.kt:69-82,:132-143,:165-176` · `bodyBold` 16 — `:50-54,:88-92,:150-154` · `HamDivider` — `:86,:148` | 32, r 8, theme-colour fill · 16 bold · dividers |
 | weeks · periods | `timetableWeekTotal`, default **17** — `CourseConfigCenter.swift:22-27` · `max = 13` — `CourseAddTimeSettingView.swift:42` | `weekMax = 25` — `CourseConfig.kt:60` · `classNumTotal = 13` — `CourseConfig.kt:72` | 17 · 13 |
-| commit · floating saves · colour auto-save | `保存这门课`, `.padding()`, `.blue`, max width, `blue@0.1`, r `8` — `CourseAddView.swift:37-44` · `保存` — `CourseEditView.swift:31-40`; `重置时间` red — `:46-56` · `.onChange(of: vm.backgroundColor) { saveColor() }` — `:23-25` | pad h 4, fill width, `48.dp`, `blue@0.15f`, r `12.dp`, `headlineBold` 14 centred — `CourseEditViewButtonCell.kt:53-74` · none · none — saved on commit | 48 high, r 12, blue @0.15 · per-section saves in edit mode · auto-save colour |
+| commit · floating saves · colour auto-save | `保存这门课`, `.padding()`, `.blue`, max width, `blue@0.1`, r `8` — `CourseAddView.swift:37-48` · `保存` — `CourseEditView.swift:31-40`; `重置时间` red — `:46-56` · `.onChange(of: vm.backgroundColor) { saveColor() }` — `:23-25` | pad h 4, fill width, `48.dp`, `blue@0.15f`, r `12.dp`, `headlineBold` 14 centred — `CourseEditViewButtonCell.kt:53-74` · none · none — saved on commit | 48 high, r 12, blue @0.15 · per-section saves in edit mode · auto-save colour |
 **Strings:** `添加课程` · `编辑课程` · `保存这门课` · `保存` · `重置时间` · `课程背景色` · `基础信息` · `课程名` · `输入课程名` · `讲师` · `输入讲师` · `地址` · `输入课程地址` · `时间设置` · `周数` · `节数` · `星期` · `WEEKDAY_SHORT_*`. Toasts: `课程名不能为空` · `存在冲突的课程` · `第%lld周-%@` · `保存失败` · `保存颜色失败` · `已保存背景颜色` · `保存课程基础信息失败` · `已保存基础信息` · `已重置课程时间` — **nine
 have no `zh-Hans.lproj` entry and render as raw keys** (`course.md:1093`). Android: `course_title_edit` · `course_edit_background_color` · `course_info_title` · `course_name_hint` · `course_instructor_hint` · `course_location_hint` · `course_edit_week_label` · `course_edit_class_label` · `course_edit_weekday_label` ·
 `course_weekdays_short` · `course_edit_action_add` · `course_edit_action_add_with_name` · `course_edit_action_reset` · `course_edit_action_modify_basic` · `course_toast_incomplete_info` · `course_toast_name_empty` · `course_toast_week_empty` · `course_toast_class_empty` ·
@@ -798,7 +816,7 @@ uses `builder.buildCasNavLink()` when `CasConfig.shared.enabled()` and swaps the
 
 | Element | iOS | Android | normative |
 |---|---|---|---|
-| presentation · dismiss · logo · gap · glyph | `.sheet` — `CourseSettingViewBasicSection.swift:69` · `取消` — `IntroView.swift:84-91` · `56×56` r `12` — `:38-41` · `16` — `:37` · `tablecells` `.system(48)` `@0.25` — `:45-47` | `HamSheet` — `CourseSettingView.kt:63,:196` · `关闭` `TextButton` `headline` 14 `ham_blue` — `IntroView.kt:183-185` · `48.dp` r `8` — `:198-204` · `12.dp` — `:196` · `size(48.dp)` `@0.25f` — `:210-215` | sheet · `关闭` · 56 r 12 · 16 · 48 @0.25 |
+| presentation · dismiss · logo · gap · glyph | `.sheet` — `CourseSettingViewBasicSection.swift:71` · `取消` — `IntroView.swift:84-91` · `56×56` r `12` — `:38-41` · `16` — `:37` · `tablecells` `.system(48)` `@0.25` — `:45-47` | `HamSheet` — `CourseSettingView.kt:63,:196` · `关闭` `TextButton` `headline` 14 `ham_blue` — `IntroView.kt:183-185` · `48.dp` r `8` — `:198-204` · `12.dp` — `:196` · `size(48.dp)` `@0.25f` — `:210-215` | sheet · `关闭` · 56 r 12 · 16 · 48 @0.25 |
 | title · subtitle · list container | `.title.bold()` 28 — `:56-57` · body 17 — `:60` · `VStack(spacing: 24)`, `.padding()`, r `8` `gray@0.15` — `:66-74` | `title` 24 + `Bold`, pad top 32/bottom 4 — `:218-224` · `body` 16, pad bottom 16 — `:226-233` · pad h 16, r `12.dp`, `ham_lightGray`, pad 16, gap `8.dp` — `:235-245` | 28 · 17 · r 8, `#EDEEEF`, gap 8 |
 | row icon · title · subtitle · chevron | `network` `.blue` — `:104-105` · `通过信息门户登录教务系统` `.bold` — `:108-109` · `通过信息门户登录教务系统，然后访问教务系统API获取课程` `.caption` — `:111-114` · `chevron.right` `.gray` — `:119-120` | `Public` `24.dp` `ham_blue` — `IntroView.kt:82-87` · `通过信息门户` `bodyBold` — `:89` · `从信息门户登录教务系统获取课程` `caption` — `:90` · `ChevronRight` — `:93-97` | 24 blue · 16 bold · 12 · chevron |
 | captcha · loading · success · error · RN gate | bundled HTML in a `WKWebView` (`EducationCaptchaView.swift:18-33`) · `VStack { ProgressView; 正在更新 }` — `CourseUpdateByCasView.swift:32-38` · `SuccessView(更新成功)` — `:39-40` · `ErrorView(更新失败, vm.errorMessage)` — `:41-43` · `rnConfig["enable"]["RNFetchCourseView"]` — `:11,:21` | `HamNavigationView(course_fetch_captcha_title)` — `:130-143` · `HamLoadingProgressBar` or the RN view — `:170-178` · `SuccessView(获取成功, 愉快使用吧)` + clear back-stack — `:156-158,:187-194` · `ErrorView(获取失败, …)`, retry pops to intro — `:198-210` · `rnComponentConfig["enable"]` contains `RNFetchCourseView` — `:72-75` | in-app web view with a title · centred spinner · success + stack cleanup · error + retry · same CCKV flag |
@@ -807,10 +825,11 @@ Android `SuccessView` / `ErrorView` (`AND/core/…/intro/`): Lottie `lottie/lott
 (`SuccessView.kt:83-91`, `ErrorView.kt:76-84`); title `title` 24sp, message `body` 16sp; button `48.dp`, `ham_blue@0.15f`, r `12.dp`, `headlineBold`, default text `完成` (`SuccessView.kt:96-108`, `ErrorView.kt:85-107`); vibrates on appear (`SuccessView.kt:62`).
 **Strings:** `获取课程` · `将按照设定的开学日期获取课程` · `通过信息门户登录教务系统` · `通过信息门户登录教务系统，然后访问教务系统API获取课程` · `从信息门户验证` · `将进入武汉大学信息门户网页验证你的身份` · `取消` · `正在更新` · `更新成功` · `更新失败` · `信息门户登录失败`/`信息门户的登录状态`. Android: `course_fetch_title` · `course_fetch_subtitle` ·
 `course_fetch_from_portal_title` · `course_fetch_from_portal_desc` · `course_fetch_captcha_title` · `course_fetch_success_title` · `course_fetch_success_message` · `course_fetch_failed_title` ·
-`course_fetch_postgraduate_title` (route live, entry commented out at `:234-241`) · `course_fetch_from_postgraduate_title|_desc` (unused) · `common_close`/`common_done` · `common_intro_cas_title`/`_subtitle`.
+`course_fetch_postgraduate_title` (route and entry `NavLink` both live: `CourseSettingViewUpdateCourseSheet.kt:229-236`) · `course_fetch_from_postgraduate_title|_desc` (unused) · `common_close`/`common_done` · `common_intro_cas_title`/`_subtitle`.
 **States:** Portal not linked — iOS `builder.buildCasNavLink()` → `从信息门户验证`
-(`CourseUpdateView.swift:31`); Android `navigate(PATH_CAS)` (`:223-231`). Portal linked — iOS swaps the row in with animation on `ham_casLoginSuccess` (`:23-29,:34-38`); Android uses `vm.useCas` (`:66`). Captcha — bundled HTML page (iOS) or a titled `HamNavigationView` web view (Android). Loading / success / error —
-spinner, then the terminal screen (Android also clears the back-stack and vibrates). Post-graduate route — absent on iOS; on Android the route exists but the entry `NavLink` is commented out (`:234-241`).
+(`CourseUpdateView.swift:30`); Android `navigate(PATH_CAS)` (`CourseSettingViewUpdateCourseSheet.kt:212-227`). Portal linked — iOS swaps the row in with animation on `ham_casLoginSuccess` (`:23-29,:34-38`); Android uses `vm.useCas` (`:66`). Captcha — bundled HTML page (iOS) or a titled `HamNavigationView` web view (Android). Loading / success / error —
+spinner, then the terminal screen (Android also clears the back-stack and vibrates). Post-graduate route — absent on iOS; on Android both the route and its entry `NavLink` are live — the route renders the RN placeholder
+`RNFetchPostGraduateCourseView` (`CourseSettingViewUpdateCourseSheet.kt:116-124`, entry `:229-236`).
 **Divergence:** Terminal copy (`更新成功/更新失败` vs `获取成功/获取失败` + `愉快使用吧`); Android adds
 Lottie, haptics and back-stack clearing; row titles are full sentences on iOS and short forms on Android; the dismiss button is `取消` vs `关闭`.
 
@@ -987,8 +1006,8 @@ options in a fixed order: `不设置` 0 · `1分钟` 1 · `2分钟` 2 · `5分�
 |---|---|---|---|
 | Form pad · card gap · row gap | 16 `:272` · **12** `:32` · **24** `:34` | h16 + top 8 `:123-128` · **16** `:124` · **16** `:130` | 16 · 16 · 16 |
 | Row icon · gap · chevron | SF symbol, 20-wide frame `:36-38` · 8 · `chevron.right` secondary `:66-67` | Material `ham_gray`, pad end 4 `:136` · 8 · `ChevronRight` `ham_gray` `:175-178` | `icon.sm` 20 `text.secondary` · 8 · `icon.xs` 12 |
-| Label / value · no-group | bold 17 `:55,:96` / 17 `:108,:140` · `无` `:140` (picker: `不设置`) | `bodyBold` 16sp `:222` / `body` 16sp `:234` · `不设置` `SDSTR:35` (picker: `未选择`) | 17/Bold / 17 · **`不设置` everywhere** |
-| Commit label · button | `确定` `:261` · blue, r10, blue shadow `:258-270` | `完成` `SDSTR:11` · 48, r12, `accent`@0.85 `:300-316` | **`完成`** · 48, h16, **r8**, `accent`, 17/Bold white (`DS:420`) |
+| Label / value · no-group | bold 17 `:55,:96` / 17 `:108,:140` · `无` `:140` (picker: `不设置`) | `bodyBold` 16sp `:222` / `body` 16sp `:234` · `不设置` `SDSTR:36` (picker: `未选择`) | 17/Bold / 17 · **`不设置` everywhere** |
+| Commit label · button | `确定` `:261` · blue, r10, blue shadow `:258-270` | `完成` `SDSTR:12` · 48, r12, `accent`@0.85 `:300-316` | **`完成`** · 48, h16, **r8**, `accent`, 17/Bold white (`DS:420`) |
 | Checkmark · sub-screen pad | `checkmark` `title2` bold, slot omitted `:36,:58` · 16 outside the card `:71,:53` | `Check` alpha 1f/0f, slot reserved `:82-86` · `Column(padding 16.dp)` | `icon.md` 24, **slot reserved** · 16 |
 | Date/time input · number picker | one `DatePicker` per field `:62,:78,:125` · wheel, width 100, `1..<1000` `:103-118` | separate date + time buttons `:107-112` · `HamPicker`, `1..999` `:189-211` | platform-native picker per field · range **1…999** |
 **Strings:** `新建日程` / `编辑日程` · `名称` · `更多数据` · `目标时间` · `群组` · `提醒时间` · `不设置` ·
@@ -1037,7 +1056,7 @@ are written on commit (`:39-41`).
 | Screen pad · card gap · icon plate | 16 `:108` · **24** `:21` · 48 glyph, pad 8, r10 `ham_lightGray` `:28-35` | 16dp `:68` · **16** `:68` · 64dp, pad 16, r12 `ham_gray@0.25f` `:74-79` | 16 · 16 · **72**, r12, `surface.tertiary`@0.25 |
 | Icon↔field gap · name field | 8 `:24` · `TextField` `.fixedSize` `:40-41` | 16dp `:84` · `BasicTextField` 17, minW 32dp `:85-98` | 16 · 17, placeholder 12 `text.tertiary` |
 | Commit · delete | `确定`, blue, r10, shadow `:91-105` · nested behind `更多操作`, red text `:75-87` | `完成`, 48, r12, `accent`@0.85 `:119-137` · always-visible 48 button `ham_red@0.85f` `:140-159` | **完成** — 48, h16, **r8**, `accent`, 17/Bold white · **always-visible second button**, 48, r8, `feedback.error`, 17/Bold white |
-| Screen title | `日程群组` hardcoded `:114` | 新增群组 / 编辑群组 `SDSTR:8-9` | 新增群组 / 编辑群组 |
+| Screen title | `日程群组` hardcoded `:114` | 新增群组 / 编辑群组 `SDSTR:9-10` | 新增群组 / 编辑群组 |
 **Strings:** `新增群组` · `编辑群组` · `日程群组` · `名称` · `完成` · `删除` · `群组名称不能为空` ·
 `添加成功` · `修改成功` · `更多操作` · `删除群组`.
 **States:** empty — n/a · loading — none · error — a toast; the screen stays.
@@ -1147,7 +1166,7 @@ is a dead `{}` (`ReservedCard.kt:91`), iOS has no `添加到系统日历`; conse
 **Entry:** Sheet from `LibraryView.swift:23` / `LibraryView.kt:42-53`.
 **Layout:** `[取消 / 关闭]` → cluster `[logo 56 r12] ⛓ [books.vertical 48 @0.25]`, gap `16` → `Spacer 32` → `连接图书馆` `.title.bold()` → `Spacer 16` → one card (r `8`/`12`, `gray@0.15`/`ham_lightGray`, rows
 spaced `24`/`8`): `🎓 从信息门户验证` + caption subtitle + chevron. Success = `✓64 on blue`, `验证成功` (28/24), `你可以开始使用图书馆了` (12/16), `Spacer 32`, button `返回`/`完成`.
-**Blocks:** 1 **Close** (`IntroView.swift:85-91`, `IntroView.kt:183-185`). 2 **Cluster** (`IntroView.swift:38-47`). 3 **Title + subtitle** — subtitle only when non-empty (`:57-61`). 4 **Method row** → CAS view (`:156-164`,
+**Blocks:** 1 **Close** (`IntroView.swift:85-91`, `IntroView.kt:183-185`). 2 **Cluster** (`IntroView.swift:38-47`). 3 **Title + subtitle** — subtitle only when non-empty (`:57-61`). 4 **Method row** → CAS view (`:141-149`,
 `LibraryIntroView.kt:63-67`); Android skips it when already authenticated (`:113-117`). 5 **Loading** — Android only, full-screen spinner (`:90-110`). 6 **Success** → dismiss (`SuccessView.swift:67-74`, `LibraryIntroView.kt:68-77`). 7 **Error** — Android only (`:78-89`).
 **Values:**
 
@@ -1233,13 +1252,13 @@ full-screen error with retry (`:24-29`), Android toast only (`LibraryBookViewMod
 └──────────────────────────────────────────────┘
 ```
 **Blocks:** 1 **Last-booking card** — Android, when a last booking differs from the filter seat (`SelectSeatView.kt:52-62`). 2 **Starred-seat card** — Android, when a starred seat is configured (`:64-75`). 3 **Building chips** — iOS preselects `buildingList.first`
-(`LibrarySelectSeatViewModel.swift:35-36`); Android sorts by id (`SelectSeatCard.kt:67-93`). 4 **Room cards** — iOS auto-scrolls to the current room (`:133-137`). 5 **Filters** — Android adds `↻` (`:211-222`). 6 **Seat grid.** 7 **Confirm** (`LibrarySelectSeatView.swift:417-454`, `SelectSeatCard.kt:363-381`).
+(`LibrarySelectSeatViewModel.swift:35-36`); Android sorts by id (`SelectSeatCard.kt:67-93`). 4 **Room cards** — iOS auto-scrolls to the current room (`:133-137`). 5 **Filters** — Android adds `↻` (`:211-222`). 6 **Seat grid.** 7 **Confirm** (`LibrarySelectSeatView.swift:409-442`, `SelectSeatCard.kt:363-381`).
 **Values:**
 
 | Element | iOS | Android | normative |
 |---|---|---|---|
 | container · nav title · icon · tint | `VStack`, pad `[.h,.top]` 16 — `:60-61` · none · per-building glyph — `:132` · `Color.blue` vs `t2` — `:135` | scroll page, pad 16, gap 16 — `SelectSeatView.kt:47-51` · `library_select_seat` — `:48` · `LocationCity` 16 — `SelectSeatCard.kt:81` · `ham_blue` vs secondary — `:76` | scroll page, pad 16 · `选择座位` · 16 · `#007AFF` |
-| room w · row bg · floor · free/total · name | `80` — `:185` · `gray@0.15` r8, ends 8 — `:198-203` · `.caption` semibold — `:169` · `free==0?red:green`, `|` — `:171-175` · `.caption` 3 lines — `:180-183` | `60.dp` — `:120` · `Gray@0.15f` r8, pad v12, ends 4 — `:98-104` · `captionBold` — `:128-131` · 3-step, no `|` — `:138-141` · `caption` — `:150-154` | 80 · `gray@0.15` r 8 · 12 semibold · 3-step, no `|` · 12 |
+| room w · row bg · floor · free/total · name | `80` — `:185` · `gray@0.15` r8, ends 8 — `:198-203` · `.caption` semibold — `:169` · `free==0?red:green`, `\|` — `:171-175` · `.caption` 3 lines — `:180-183` | `60.dp` — `:120` · `Gray@0.15f` r8, pad v12, ends 4 — `:98-104` · `captionBold` — `:128-131` · 3-step, no `\|` — `:138-141` · `caption` — `:150-154` | 80 · `gray@0.15` r 8 · 12 semibold · 3-step, no `\|` · 12 |
 | filters · refresh | 36×32, `@0.25` + blur — `:283-289,:298-305` · none | 40×32 r8, `@0.25f` — `:180-206` · 40×32 gray — `:211-222` | 40×32, r 8, @0.25 · refresh present |
 | grid · seat no. · cell bg · attributes | `LazyVGrid(adaptive(min 70), gap 10)` — `:321-323` · `.body.bold()` 17 — `:388` · selected `blue@0.2` else `gray@0.2`, r8 — `:409` · 4-high strips — `:396-403` | `FlowRow(gaps 12/12, maxH 400)` — `:262-274` · `24.sp` — `:286-289` · container `gray@0.15f` r8, pill r6 — `:264-266,:296-300` · 14 dp icons on a pill — `:309-325` | adaptive min 70, gap 12 · 17 · r 8, blue @0.2 · 14 icons on a pill |
 | weekday chip · last-booking badge | none | yellow, bg `@0.2f`, r6, pad 4, 14sp — `StarredSeatCard.kt:53-58` · seatNum 36 bold + white-on-blue badge r6 pad4 — `LastBookingCard.kt:38-43` | yellow r 6 · 36 bold + badge |
@@ -1261,7 +1280,7 @@ iOS renders the same placeholder twice, Android uses two strings. Room switch �
 | Element | iOS | Android | normative |
 |---|---|---|---|
 | container · labels · separators | `ScrollView` + `VStack(leading,0)`, `.padding()` 16 — `:55-56,:113` · `开始时间`/`结束时间` — `:58,:73` · `Divider`×2 — `:72,:84` | `Column(pad 16, gap 16)` — `:44` · none — `:54` · none | pad 16, gap 16 · labelled rows · none |
-| pickers · switch | `UIDatePicker` `.wheels`, 30-min, `en_GB`, stacked, centred — `:61,:76` · system `Toggle` after a divider — `:85-87` | chip → `TimePickerDialog` 1/30/60, one row with `-` — `:45-62`, `HamFixedTimePickerButton.kt:32-35,:62` · `HamSwitch` on the picker row, track `ham_green`/`ham_lightGray` — `:64-65`, `Switch.kt:47` | one row, 30-min · `#34C759`/`#EDEEEF` |
+| pickers · switch | `UIDatePicker` `.wheels`, 30-min, `en_GB`, stacked, centred — `:61,:76` · system `Toggle` after a divider — `:85-87` | chip → `TimePickerDialog` 1/30/60, one row with `-` — `:45-62`, `HamFixedTimePickerButton.kt:32-35,:62` · `HamSwitch` on the picker row, track `ham_green`/`ham_lightGray` — `:64-65`, `Switch.kt:34` | one row, 30-min · `#34C759`/`#EDEEEF` |
 | spacer · CTA · result | `30` — `:89` · `确认` white, `.padding()`, r `10`, blue, full width — `:100-110` · `.ham_libraryOnSetQuickBookTemporaryModifyTime` — `:92-96` | `16.dp` — `:44` · `确定` `headlineBold`, 48, r 12, `blue@0.85f`, h-pad 12 — `:78-91` · `savedStateHandle["selectedTime"]` — `:69-76` | 16 · `确定`, 48, r 12, blue @0.85 · return-on-pop |
 | bounds | begin 08:00–23:00, end 08:30–23:30 — `:20,:23,:26,:29` | same, default end 22:30 — `SelectTimeViewModel.kt:44,:52-62` | 08:00–23:00 / 08:30–23:30 |
 **Strings:** `选择预约时间` · `开始时间` · `结束时间` · `预约明天` · `确定` · `未设置`.
@@ -1276,15 +1295,15 @@ reverts an end below `begin+30` (`:77-79`), Android relies on the dialog bound (
 **Entry:** `libraryQuickBook` (`QuickBookCard.swift:97-104`) / `library/quick-book` (`LibraryMainViewQuickBookCard.kt:107-116`). Booking starts on appear.
 **Layout:** bright bg, pad `16`, gap `8` — loading: `ProgressView(value:)` (iOS) or Lottie `lottie_flying.json` at `200` (Android), then `正在快速预约` (24) + `请稍等` (16). Success: `✓64` on blue,
 `预约成功`, a `预约信息` card carrying seat / location / `yyyy-MM-dd HH:mm-HH:mm`, optional `座位发生了变更`, then `完成`/`返回`. Error: `✕64` on red, `快速预约失败`, the message, `返回`.
-**Blocks:** 1 **Loading indicator** (`LibraryQuickBookView2.swift:123-131`, `QuickBookLoadingCell.kt:35-40`). 2 **Loading copy** (`:30-43`). 3 **Success card** shared with Book (`BookSuccessCard.kt:99-151`, `LibraryBookSuccessView.swift:52-125`). 4 **Error card** (`QuickBookFailCell.kt:36-63`).
+**Blocks:** 1 **Loading indicator** (`LibraryQuickBookView2.swift:123-131`, `QuickBookLoadingCell.kt:35-40`). 2 **Loading copy** (`:30-43`). 3 **Success card** shared with Book (`BookSuccessCard.kt:99-151`, `LibraryBookSuccessView.swift:52-121`). 4 **Error card** (`QuickBookFailCell.kt:36-63`).
 **Values:**
 
 | Element | iOS | Android | normative |
 |---|---|---|---|
 | bg · transition · nav title | `ham_bg_b1Color` — `:136` · none · none | `ham_bg_b1` — `QuickBookFailCell.kt:29` · `fadeIn() togetherWith fadeOut()` — `LibraryQuickBookView.kt:46` · `library_quick_reservation` — `:51` | `#F9F9F9` · crossfade · `快速预约` |
-| loading indicator · title · subtitle | `ProgressView(value:)`, synthetic fill — `:123,:131` · `.body` — `:125,:127` · none | Lottie `lottie_flying.json` 200, fillMaxWidth — `…LoadingCell.kt:36` · `title` 24 — `:42` · `body` 16 — `:43` | determinate bar, pad 16 · 24 · 16 |
-| success icon · error icon | `checkmark.circle.fill` 64, white on green — `LibraryBookSuccessView.swift:56-58` · `xmark.circle.fill` 64, white on red — `ErrorView.swift:34-35` | `Done` 64, `ham_blue` circle, pad 8 — `BookSuccessCard.kt:99-107` · `Close` 64, `ham_red` circle — `:36-44` | 64, white on `#007AFF` · 64, white on `#FF3B30` |
-| error title · detail · CTA · hint | `预约失败` `.title` — `ErrorView.swift:37` · hint `.caption` — `:40-41` · `返回` bold, pad, maxW 350, r 12, `blue@0.15` — `:50-57` · `座位发生了变更` `.caption` — `LibraryQuickBookView2.swift:113` | `title` 24 — `:46` · `body` 16 — `:47` · `headlineBold`, 48, r 12, `blue@0.85f`, h-pad 12 — `:53-63` · none | 24 · 16 · 48, r 12, blue @0.85 · caption under the title |
+| loading indicator · title · subtitle | `ProgressView(value:)`, synthetic fill — `:123,:131` · no explicit `.font`, system body — `:125,:127` · none | Lottie `lottie_flying.json` 200, fillMaxWidth — `…LoadingCell.kt:36` · `title` 24 — `:42` · `body` 16 — `:43` | determinate bar, pad 16 · 24 · 16 |
+| success icon · error icon | `checkmark.circle.fill` 64, white on green — `LibraryBookSuccessView.swift:56-58` · `xmark.circle.fill` 64, white on red — `ErrorView.swift:31-33` | `Done` 64, `ham_blue` circle, pad 8 — `BookSuccessCard.kt:99-107` · `Close` 64, `ham_red` circle — `:36-44` | 64, white on `#007AFF` · 64, white on `#FF3B30` |
+| error title · detail · CTA · hint | `预约失败` `.title` — `ErrorView.swift:35` · hint `.caption` — `:39` · `返回` bold, pad, maxW 350, r 12, `blue@0.15` — `:44-53` · `座位发生了变更` — `LibraryQuickBookView2.swift:113`, `.caption` — `LibraryBookSuccessView.swift:64` | `title` 24 — `:46` · `body` 16 — `:47` · `headlineBold`, 48, r 12, `blue@0.85f`, h-pad 12 — `:53-63` · none | 24 · 16 · 48, r 12, blue @0.85 · caption under the title |
 **Strings:** `正在快速预约` · `请稍等` · `快速预约` · `快速预约失败` · `预约成功` · `座位发生了变更` · `返回` · `完成` · `预约信息`.
 **States:** In-flight — determinate bar on iOS (synthetic +0.001/0.01 every 100 ms to 0.95, **not** reset on re-entry — `:47-60`) or Lottie on Android. Success — with or without the seat-changed hint. Error —
 `error.message` + dismiss. `Unload` — iOS falls through to the loading branch, Android renders **nothing** (`LibraryQuickBookView.kt:70`). Both guard re-entry on `Unload` (`LibraryQuickBookView2.swift:138-140`, `LibraryQuickBookViewModel.kt:51-53`).
@@ -1324,7 +1343,7 @@ iOS, Android guards with `if (… == Loading) return false` (`:87-89,:152-154`).
 
 | Element | iOS | Android | normative |
 |---|---|---|---|
-| container · bg · empty text/container | `VStack`, `ScrollView` only when loaded — `:15,:22` · `ham_bg_b1Color` — `:97` · `没有历史记录`, default, full width — `:18-20` · bare text | `HamNavigationView2` — `:54` · `ham_bg_b1` — `NavigationView.kt:385` · `暂无历史记录` `caption` 12 — `:123-127` · inside `HamCardView(pad 16)` — `:61` | scroll page · `#F9F9F9` · `暂无历史记录` 12 · inside a card |
+| container · bg · empty text/container | `VStack`, `ScrollView` only when loaded — `:15,:22` · `ham_bg_b1Color` — `:97` · `没有历史记录`, default, full width — `:18-20` · bare text | `HamNavigationView2` — `:54` · `ham_bg_b1` — `NavigationView.kt:389` · `暂无历史记录` `caption` 12 — `:123-127` · inside `HamCardView(pad 16)` — `:61` | scroll page · `#F9F9F9` · `暂无历史记录` 12 · inside a card |
 | card r · cluster gap · date header · rail · seat column | `16` — `:74-75` · `padding(.bottom,16)` — `:77` · `.caption` 12 — `:37` · `12` wide, stat colour, `@0.15` when gray — `:43-45` · `48` — `:55` | `16.dp` — `Card.kt:53` · `spacedBy 8.dp` — `:70` · none · none · `fillToConstraints` — `:83` | 16 · 16 · 12, shown · 12 wide · 48 |
 | seat no. · status · location · times | `.body.bold()` 17 — `:49` · `.caption` 12, stat colour — `:51-53` · `.caption` multiline — `:56-58` · `begin` over `end`, `.caption`, trailing pad 16 — `:63-68` | `bodyBold` 16 — `:88` · `body` 16 — `:104-108` · `caption` — `:93` · one line `date begin-end` — `:96-100` | 17 · 12 · 12 · stacked, pad 16 |
 | row pad · divider · sort · totals | v `4` — `:60` · none · clusters by date desc — `LibraryHistoryViewModel2.swift:95` · `away`/`checkIn` elapsed + `stop` end−begin — `:76-87` | none · `HamDivider` between rows, none after last — `:117-119` · rows by id desc — `:71` · unused strings | v 4 · between rows · date desc · per-day total |
@@ -1338,7 +1357,7 @@ refetches (`:23-39`). Totals unavailable — the `共计…分钟` suffix is hid
 
 ### 9. Settings (设置) — platforms: both
 **Purpose:** Account, captcha notice, starred seat, local data, statistics, diagnostics.
-**Entry:** Grid's 设置 cell (`FunctionButtonView.swift:90`) / `library/setting` (`FunctionCard.kt:66`).
+**Entry:** Grid's 设置 cell (`FunctionButtonView.swift:90`) / `library/setting` (`FunctionCard.kt:65`).
 **Layout:** nav `设置` / `图书馆设置` → pad `16`, cards gap `8`. iOS order: account → captcha → starred seat → analytics → local data. Android: account → captcha → starred seat → local data → statistics (only when the remote flag is on) → 其他. Each card is a `HamCardView` with a bottom-leading watermark; the account
 card ends in a `48`-high, r `12`, `blue@0.85f` login bar on Android and a plain text `重新登录` on iOS.
 **Blocks:** 1 **Account** — id row + login button; iOS shows `ProgressView` + `正在登录` and disables the button (`AccountCard.swift:69-81`), Android has no per-card state (`:99-117`). 2 **Captcha** — title, subtitle, blue accent line (`CaptchaCard.swift:13-22`, `:127-140`). 3 **Starred seat** — iOS lists one
@@ -1411,9 +1430,9 @@ Android disables `确定` (`:196,:203-206`). Overlapping entry — Android only,
 **Entry:** Home print card → iOS `Route.libraryPrint` (`Route.swift:33`, composed at `:231`); Android `LibraryRoutePath.PRINT` (`PrintFunctionCard.kt:46`).
 **Layout:** nav `打印` → h pad `16` → spacer `16` → drop zone `168` high, r `16`, tint, centred `＋` `72` + `添加文件` → share hint (`caption`, pad v `8`) → spacer `36` → `打印机位置` `bodyBold` → spacer `8` →
 state switch: spinner + `加载中`, `加载异常`, or a list (gap `8`, pad bottom `16`) of rows r `16`, `gray@0.15`, pad `16`: `🖨48` + name (2 lines) + status (3 lines); empty shows `没有找到打印机`.
-**Blocks:** 1 **Drop zone** → iOS `.printFileSourcePicker` (`:49-51`), an action sheet `添加文件` offering `照片图库` · `文件` · `取消` (`PrintFileSourcePicker.swift:59-68`) then `.fileImporter` (`:70`); then `router.push(.printPrepare(url:name:))` (`LibraryPrintView.swift:50`). Android
+**Blocks:** 1 **Drop zone** → iOS `.printFileSourcePicker` (`:49-51`), an action sheet `添加文件` offering `照片图库` · `文件` · `取消` (`PrintFileSourcePicker.swift:31-42` — `照片图库` now opens a `.photosPicker`, `:51-54`) then `.fileImporter` (`:43-50`); then `router.push(.printPrepare(url:name:))` (`LibraryPrintView.swift:50`). Android
 `ActivityResultContracts.OpenDocument()` MIME `*/*` (`LibraryPrintView.kt:64,:83`); the URI is bundled into `savedStateHandle` and the app navigates to `PrintRoutePath.MAIN` (`:66-73`). 2 **Share hint** (`LibraryPrintView.swift:27-30`; `LibraryPrintView.kt:101-104`). 3 **Section header** (`LibraryPrintView.swift:34-37`; `LibraryPrintView.kt:107`).
-4 **Printer list** (`LibraryPrintView.swift:78-137`; `LibraryPrintView.kt:134-152`).
+4 **Printer list** (`LibraryPrintView.swift:77-135`; `LibraryPrintView.kt:134-152`).
 **Values:**
 
 | Element | iOS | Android | normative |
@@ -1429,7 +1448,7 @@ state switch: spinner + `加载中`, `加载异常`, or a list (gap `8`, pad bot
 | name / status · row gap | `.body.bold` `lineLimit(2)` / `.caption` `lineLimit(3)` — `:118-126` · `spacing: 8` — `:112` | `bodyBold` 2 lines / `caption` 3 lines, ellipsis — `:139-152` · gap `8.dp` | 16 bold · 12 · 2 / 3 lines · gap 8 |
 | list container · bottom | `VStack(spacing: 8)` — `:102` · spacer `16` — `:43` | `LazyColumn`, gap `8.dp`, pad bottom `16.dp` — `:125-126` | gap 8 · bottom 16 |
 | load trigger | `.task { await vm.updatePrinterList() }` — once — `:52-54` | `SideEffect { vm.updatePrinterList() }` — re-fires on **every recomposition** — `:60-62` | once per appearance |
-**Strings:** iOS `Localizable.strings:811-822` — `打印` · `在图书馆公共打印机打印` · `添加文件` · `或者通过其他应用分享文件到Ham中打印` · `打印机位置` · `加载异常` · `没有找到打印机` · `正在上传` · `上传失败` · `上传成功` · `请到支持的打印机执行作业` · `读取文件失败`. Android `feature/library/…/strings.xml:98-106` —
+**Strings:** iOS `Localizable.xcstrings` — `打印` · `在图书馆公共打印机打印` · `添加文件` · `或者通过其他应用分享文件到Ham中打印` · `打印机位置` · `加载异常` · `没有找到打印机` · `正在上传` · `上传失败` · `上传成功` · `请到支持的打印机执行作业` · `读取文件失败`. Android `feature/library/…/strings.xml:98-106` —
 `library_print` · `library_print_in_library` · `library_print_tasks` · `library_printer_location` · `library_add_file` · `library_print_share_hint` · `library_no_printer_found`. Both are fully localised; **no string is missing on either side**.
 **States:** `unload`/`Unload` renders nothing below the header (`LibraryPrintView.swift:80-81`; `LibraryPrintView.kt:168`). Loading → spinner + `加载中`. Loaded → list. Empty → iOS replaces the list with `没有找到打印机` (`:97-100`); Android appends it as a trailing list
 item (`:157-165`). Load error → `加载异常` only; the captured `printerListErrorMessage` (`LibraryPrintViewModel.kt:28`) is never surfaced. File picked → iOS pushes `.printPrepare` (`LibraryPrintView.swift:50`), Android navigates to `PrintRoutePath.MAIN` (`LibraryPrintView.kt:64-74`); cancelled → unchanged.
@@ -1437,7 +1456,7 @@ item (`:157-165`). Load error → `加载异常` only; the captured `printerList
 picker directly. Empty state: iOS replaces the list, Android appends. Android re-fetches the printer list on every recomposition. Android ships `library_print_tasks` (`打印任务`) for `PrintStatusCard.kt`, which has **zero call sites** — dead code, and no iOS counterpart exists or is needed.
 
 > **Correction.** Earlier revisions of this document, `design-system.md` §8.1, `ui-parity.md` and `logic-parity.md` all stated that print is Android-only and that iOS ships only an unreferenced data layer. That was wrong. iOS has shipped the whole flow since
-> `811c03f6` (2026-09-21): `Route.libraryPrint` and `Route.printPrepare` (`Route.swift:33-34`, composed at `:231,:234`), `LibraryPrintView.swift` (138 lines), `PrintPrepareView.swift` (330 lines), `PrintFileSourcePicker.swift`, `PrintPrepareRouteView.swift`,
+> `811c03f6` (2026-09-21): `Route.libraryPrint` and `Route.printPrepare` (`Route.swift:33-34`, composed at `:231,:234`), `LibraryPrintView.swift` (136 lines), `PrintPrepareView.swift` (138 lines — the options form was extracted to `shared/ui/print/PrintOptionsForm.swift` so the share extension can host it), `PrintFileSourcePicker.swift`, `PrintPrepareRouteView.swift`,
 > the `PrintActionExtension` share target, four unit-test files and one E2E suite. The iOS data layer is <ins>not</ins> dead. The two clients are near-identical; what remains is the divergence list above.
 
 ---
@@ -1452,7 +1471,8 @@ migration tasks, not spec.
 
 `IOS/` `repos/ham-ios/Ham/iOS/ui/sport/` · `IOSSH/` `repos/ham-ios/Ham/iOS/ui/common/` ·
 `AND/` `repos/ham-android/android/feature/sport/…/ui/` · `ANDCORE/` `android/core/ui/…/common/ui/` ·
-`IS:` `Ham/zh-Hans.lproj/Localizable.strings` · `AS:` feature `res/values/strings.xml` ·
+`IS:` `Ham/Localizable.xcstrings` **key** (dotted lower-camelCase, e.g. `IS:common.retry`) ·
+`AS:` feature `res/values/strings.xml` ·
 `ASCOMMON:` core-ui `res/values/strings.xml`. Citations use the **basename**: `.swift` = iOS,
 `.kt` = Android. pt and dp are 1:1.
 
@@ -1500,21 +1520,21 @@ time, payment block when unpaid; 去支付 → §5. 4 **Function card** — 查�
 | Element | iOS | Android | normative |
 |---|---|---|---|
 | page pad · block gap | 16 h only `SportMainView.swift:33` · divider padV 8 `:24` | 16 all `:31` · `spacedBy(8)` `:32` | 16 all · 8 |
-| banner h · radius · surface | 200 · 16 · `ham_bg_b2Color` `SportMainViewBannerCard.swift:141,139,138` | 180dp · card default `SportMainViewBannerCard.kt:73` | 180 · 16 · `ham_bg_b2` |
+| banner h · radius · surface | 200 · 16 · `ham_bg_b2Color` `SportMainViewBannerCard.swift:132,130,129` | 180dp · card default `SportMainViewBannerCard.kt:73` | 180 · 16 · `ham_bg_b2` |
 | page-0 icon · tint · title | `sportscourt.fill` 72 `:46-47` · `.green` `:55` · `.title.bold()` 28 `:51` | `Stadium` 72dp `:106` · brand `:107` · `title` 24 Bold `:108` | 72 · `ham_brand_sport` · 24/Bold |
 | grid icon · tint | 36 · 6×9 · spacing 8 · gray@0.25 `:66-71` | 56dp · 5×10 · no spacing · `ham_gray`@0.2 `:87-94` | 56 · 5×10 · `ham_gray`@0.2 |
 | bulletin title · date · body · 查看详情 | bold 1-line `:95-97` · `.caption` t2 `:98-101` · 5-line limit `:103-105` · link + arrow blue offset(−16,−4) `:111-118` | `bodyBold` `:122` · `caption` `:123` · no limit `:125` · absent | `bodyBold` · `caption` secondary · 5 lines · link present |
 | dots · auto-advance | native always-bg `:137` · 5 s timer `:38`,`:127-135` | 8dp circle pad 2 DarkGray/LightGray bottom-pad 16 `:141-148` · none | 8 · bottom-pad 16 · 5 s loop |
-| order card radius · surface · status strip | 16 · `ham_bg_b2Color` `SportMainViewCurrentOrderCard.swift:99,98` · white bold pad v8 on `Color.blue` `:21-26` | card default · `bodyBold` white on `ham_blue` pad v8/h12 `SportMainViewCurrentOrderCard.kt:65-73` | 16 · `ham_bg_b2` · `bodyBold` white on `ham_blue` pad v8/h12 |
+| order card radius · surface · status strip | 16 · `ham_bg_b2Color` `SportMainViewCurrentOrderCard.swift:93,92` · white bold pad v8 on `Color.blue` `:21-26` | card default · `bodyBold` white on `ham_blue` pad v8/h12 `SportMainViewCurrentOrderCard.kt:65-73` | 16 · `ham_bg_b2` · `bodyBold` white on `ham_blue` pad v8/h12 |
 | court badge · venue line · time line | 32 r6 white `title2` rounded bold `:29-35` · `{type} \| {stadium.title}` `:37-38` · `yyyymmddhhmm-HHmm` `:40-41` | 36 r6 `StadiumAreaIcon` `:28-34` · `{type.title} \| {address}` `:82-84` · `yyyyMMdd HHmm-HHmm` `:87-90` | 36 r6 · `{type} \| {stadium.title}` · `yyyyMMdd HHmm-HHmm` |
 | watermark · body pad · 去支付 | SF Symbol 128 gray@0.15 `:83-96` · h+bottom 16 top 8 `:76-77` · white pad 8/8 blue r6 `:63-68` | absent · 12 all `:77` · `ham_blue` r8 pad 8/8 `headline` white `:139-155` | 128 gray@0.15 · 12 all · r8 pad 8/8 `headline` white |
 | pay divider · deadline · out-of-window | `Divider()` `:46` · `.caption` `.red` `:50-51` · bold + `.caption` `:53-56` | `HamDivider` pad v8 `:92` · `caption` `ham_red` `:110-117` · `captionBold`+`caption` `:119-134` | pad v8 · `caption` `ham_red` · `captionBold`+`caption` |
 | quick card pad · radius · 收藏 chip | 16 · 16 `SportMainViewQuickOrderCard.swift:104-107` · `caption` orange pad 4 orange@0.15 r4 `:37-47` | card default · orange@0.25 r4 pad h8/v2 star 18dp `:93-116` | 16 · 16 · orange@0.25 r4 pad h8/v2 star 18 |
 | chevrons · picker · 预约 CTA | `arrowtriangle.right.fill` 8 green `:51-53` · native segmented `:83-90` · pad v16 maxWidth green@0.25 r8 `:94-99` | `ArrowRight` 24 green offset −8 `:119-126` · `HamHorizontalPicker` `:142-152` · green@0.20 r8 pad v12 `bodyBold` `:171-185` | 8 brand · segmented · brand@0.20 r8 pad v12 `bodyBold` brand |
-| function card h · gap · left tile · right tile | 150 · 8 · icon 64 green@0.13 r16 bold+triangle 8 `.caption2` 11 `SportMainViewFunctionCard.swift:132,13,19-46` | 160dp · 8 · icon 72dp brand@0.15 r16 `body` Bold `caption` 12 `SportMainViewFunctionButtonCard.kt:53,54,67-94` | 160 · 8 · icon 72 · brand@0.15 r16 · `body` Bold · `caption` 12 |
+| function card h · gap · left tile · right tile | 150 · 8 · icon 64 green@0.13 r16 bold+triangle 8 `.caption2` 11 `SportMainViewFunctionCard.swift:118-120,13,19-46` | 160dp · 8 · icon 72dp brand@0.15 r16 `body` Bold `caption` 12 `SportMainViewFunctionButtonCard.kt:53,54,67-94` | 160 · 8 · icon 72 · brand@0.15 r16 · `body` Bold · `caption` 12 |
 
 **Strings:** `运动` `AS:3` · `场馆预约公告` `AS:26` · `查看详情` · `查看场馆` `AS:27` · `查看空余的运动场馆预约`
-`AS:28` · `订单中心` `AS:29` · `你的历史预约记录` `AS:30` (correct twin already at `IS:539`) · `设置` `AS:31` ·
+`AS:28` · `订单中心` `AS:29` · `你的历史预约记录` `AS:30` (correct twin already at `IS:common.yourReservationHistory`) · `设置` `AS:31` ·
 `场馆预约选项` `AS:32` · `收藏` `AS:34` · `今天` `AS:35` · `明天` `AS:36` · `预约` `AS:37` · `去支付` `AS:38` ·
 `请于%1$s前完成支付` `AS:40` · `当前未处于可支付时间` `AS:41` · `请于%1$s-%2$s完成支付` `AS:42`. Status names are
 data-driven (iOS `status.name.localized` `:20`; Android `status.displayNameResID` `:66`).
@@ -1529,7 +1549,7 @@ normative takes Android's Banner → Quick → CurrentOrder → Function (`:80`,
 5-bulletin cap, the watermark and the segmented picker are iOS-only and become normative; Android's page 0
 is untappable (`SportMainViewBannerCard.kt:76-110`) and must open §9. Android's venue line reads
 `stadium.address`, iOS `stadium.title`. **预定 → 预约**: the CTA (`SportMainViewQuickOrderCard.swift:94`,
-`AS:37`), `场馆预定公告` (`SportMainViewBannerCard.swift:50`, `AS:26`), `你的历史预定记录` (`IS:538`, `AS:30`),
+`AS:37`), `场馆预定公告` (`SportMainViewBannerCard.swift:50`, `AS:26`), `你的历史预定记录` (`IS:sport.main.yourBookingHistory`, `AS:30`),
 `场馆预定选项` (`AS:32`).
 
 ### 2. Select area & order (选择场地并预约) — platforms: both
@@ -1620,10 +1640,10 @@ both axes.
 | CTA padding · radius · fill · label | v12 · h16 `:33-34` · 8 · `Color.green` `:36-37` · `.white` `:32` | v4 · h16 `:83-84` · 8 · `ham_brand_sport` `:80-82` · `bodyBold` `ham_white` `:88-90` | v12 · h16 · 8 · `ham_brand_sport` · `bodyBold` white |
 | transition | `.move(edge:.bottom)` `:49` | `slideInVertically{it/2}+fadeIn` `SportSelectOrderView.kt:138-139` | slide + fade |
 
-**Strings:** `请选择运动类别` `IS:808` / `请选择场所` `AS:64` · `预约时间段` `IS:858`, `AS:65` · `已闭馆` `IS:647`,
-`AS:66` · `¥%1$s起` `AS:68` · `加载时遇到了错误` `IS:203`, `AS:71` · `无可用时间段` `IS:684` · `详情` `IS:800`,
-`AS:70` · `学专` `IS:629`, `AS:80` · `余%1$d` `AS:81` · `选择` `IS:839`, `AS:82` · `已选择` `IS:646`, `AS:69` ·
-`%1$s-%2$d号场` `IS:468` · `预约` `IS:132`. Sport-type names are data (`sport_type_*_keyword` `AS:86-88`).
+**Strings:** `请选择运动类别` `IS:common.pleaseSelectASport` / `请选择场所` `AS:64` · `预约时间段` `IS:common.reservationTimeSlot`, `AS:65` · `已闭馆` `IS:common.closed`,
+`AS:66` · `¥%1$s起` `AS:68` · `加载时遇到了错误` `IS:common.errorOccurredWhileLoading`, `AS:71` · `无可用时间段` `IS:common.noAvailableTimeSlots` · `详情` `IS:common.details`,
+`AS:70` · `学专` `IS:common.acad`, `AS:80` · `余%1$d` `AS:81` · `选择` `IS:score.jsf2.choose`, `AS:82` · `已选择` `IS:score.jsf2.selected`, `AS:69` ·
+`%@-%lld号场` `IS:sport.selectarea.court` · `预约` `IS:library.main.reserve`. Sport-type names are data (`sport_type_*_keyword` `AS:86-88`).
 
 **States:** unload — header + venue list, footer hidden. loading (submitting) — full-screen spinner, header
 and footer both removed (`SportOrderView.swift:25-27`; `SportSelectOrderView.kt:81-85`). error — §13 error
@@ -1640,8 +1660,8 @@ Android in `remember` (`SportSelectItemView.kt:43`), so it is lost on configurat
 truer total, and is normative. iOS force-unwraps `stadiumAreaList.first(where:)`
 (`SportOrderViewFooter.swift:15`) — it must not. **Terminology:** the footer CTA is `预约` on iOS and `预定` on
 Android (`AS:37`); the slot strip reads `预约`/`选择` on iOS (`SportOrderViewAppointmentAreaCell.swift:192`) and
-always `选择` on Android. `SportSelectAreaTimeHeaderCard.swift` is dead code (no call sites, blue chips) — do
-not spec from it.
+always `选择` on Android. The blue-chip slot header `SportSelectAreaTimeHeaderCard.swift` was **deleted** —
+`53a17721` (#101, "remove dead code that PR #99 did not reach") — so it is not a source to spec from.
 
 ### 3. Select / picker (选择场地) — platforms: both
 **Purpose:** The §2 body reused as a picker — the footer returns the selection to the caller instead of
@@ -1663,13 +1683,13 @@ tile toggles; no `canAppointment` guard, no one-tap order path. 10 **Footer** �
 
 | Element | iOS | Android | normative |
 |---|---|---|---|
-| tile width · surface | adaptive 110–150 `SportSelectViewAppointmentAreaCell.swift:74` · `Color.green`@0.25, always brand `:184`,`:178` | 100dp `SportAreaSelectItemAppointmentDetailView.kt:49` · brand `@0.15f` always `:49` | 100 · brand `@0.15` |
+| tile width · surface | adaptive 110–150 `SportSelectViewAppointmentAreaCell.swift:71` · `Color.green`@0.25, always brand `:184`,`:178` | 100dp `SportAreaSelectItemAppointmentDetailView.kt:49` · brand `@0.15f` always `:49` | 100 · brand `@0.15` |
 | tile h · radius · content | 56 · 6 · times + 学专 only `:189`,`:186`,`:140-166` | 50 · 8 · times + 学专 only `:50`,`:48`,`:62-79` | 50 · 8 · times + 学专 only |
 | brief chip free flag | hardcoded `true` `:39` | hardcoded `true` `SportAreaSelectItemStadiumAreaAppointmentAreaView.kt:75` | real `canAppointment` |
 | footer CTA label · padding · fill · radius | `确定` · v12/h16 `SportSelectViewFooter.swift:33,35-36` · `Color.green` · 8 `:37-40` | `预定` `AS:37` · v4/h16 `SportSelectFooterView.kt:87,83-84` · `ham_brand_sport` · 8 `:80-82` | **`确定`** · v12/h16 · `ham_brand_sport` · 8 |
 | CTA text · inset | `.caption` `:26` · `UIScreen.bottomSafeArea` `:50` | `caption` `:64-67` · `navigationBarsPadding()` `:50` | `caption` · system bars |
 
-**Strings:** as §2 plus `确定` (`IS:243`; **absent on Android**, which reuses `预定`).
+**Strings:** as §2 plus `确定` (`IS:common.confirm`; **absent on Android**, which reuses `预定`).
 
 **States:** no screen-level state machine. unload — header + venue cards. loading — iOS renders a centred
 `ProgressView` (`SportSelectViewBody.swift:23-26`); Android has none, only per-court/per-slot spinners
@@ -1709,7 +1729,7 @@ token over the platform bridge; the screen pops and the caller resumes.
 | dismissal | `dismiss()` when `autoDismiss` `:51-53` | `popBackStack()` unconditionally `:26` | pop after handoff |
 
 **Strings:** `输入验证码` (`SportCaptchaView.swift:34` — no `IS:` key, renders the literal; must be added) ·
-`刷新` `IS:417`, `AS:14`. Page copy lives in the HTML asset.
+`刷新` `IS:watch.libraryMainNoTokenView.refresh`, `AS:14`. Page copy lives in the HTML asset.
 
 **States:** unload/loading — none modelled, the page owns its own. error — none; a failed challenge never
 fires the bridge. success — token posted, screen popped.
@@ -1753,17 +1773,17 @@ expands block 4 into the URL state. 6 **Expanded URL** — the hint above the se
 | pre-button gap · 确认 fill · radius · pad · label | 32 `:77` · `Color.blue` `:87` · 12 `:88` · v16 `:85` · `.white` unstyled `:83` | `spacedBy(4)` `:83` · `ham_blue` `:98` · 12 `:97` · v12 `:99` · `body` `ham_white` `:101` | 32 · `ham_blue` · 12 · v12 · `body` white |
 | URL hint · text · surface · encoding | unstyled `:94` · `.caption` pad 8 `textSelection(.enabled)` `:96-98` · gray@0.25 r12 `:100-101` · `.urlHostAllowed` `:91` | `body` `:111` · read-only `HamTextField` `caption` `:112-115` · none · `URLEncoder.encode(…, UTF-8)` `:109` | `body` · `caption` pad 8 selectable · `ham_gray`@0.15 r12 · UTF-8 form encoding |
 
-**Strings:** `支付` `AS:16` · `方法1` `IS:682`, `AS:17` · `前往微信小程序“场馆预约”继续支付` `IS:584`, `AS:18` ·
-`方法2` `IS:683`, `AS:19` · `从武汉大学统一支付网页支付` `AS:20` · `您在武汉大学统一支付的交易与Ham无关。` `AS:21` ·
-`核对支付信息` `IS:732`, `AS:22` · `确认` `IS:209`, `AS:23` · `长按下方文本复制到浏览器打开` `IS:853`, `AS:24`.
+**Strings:** `支付` `AS:16` · `方法1` `IS:common.method1`, `AS:17` · `前往微信小程序“场馆预约”继续支付` `IS:common.goToWechatMiniProgram`, `AS:18` ·
+`方法2` `IS:common.method2`, `AS:19` · `从武汉大学统一支付网页支付` `AS:20` · `您在武汉大学统一支付的交易与Ham无关。` `AS:21` ·
+`核对支付信息` `IS:common.verifyPaymentInfo`, `AS:22` · `确认` `IS:library.quickbooktemporarymodifytime.confirm`, `AS:23` · `长按下方文本复制到浏览器打开` `IS:common.longPressTheTextBelow`, `AS:24`.
 
-**States:** unload — method 1 only. loading — centred `HamLoadingProgressBar` (`SportPayView.kt:70`); iOS has
+**States:** unload — method 1 only. loading — centred `HamLoadingProgressBar` (`SportPayView.kt:72`); iOS has
 no loading state, method 2 simply does not render until the payload arrives (`SportPayView.swift:42`).
 error — **neither platform renders one**; `获取付费信息失败` (`AS:90`) is declared but unused and must be shown
 with a retry. success — the JSON panel / expanded URL.
 
 **Divergence:** The expand default is **inverted** — iOS starts collapsed showing the JSON panel
-(`SportPayView.swift:17`,`:63`), Android starts expanded showing the URL (`SportPayView.kt:60`,`:82`);
+(`SportPayView.swift:17`,`:63`), Android starts expanded showing the URL (`SportPayView.kt:62`,`:82`);
 collapsed-first is normative. iOS has no title and no loading state; Android has both. iOS renders the method
 number as a chip, Android as plain text — the chip is normative. iOS percent-encodes with `.urlHostAllowed`,
 the wrong character set for a query value — use UTF-8 form encoding. iOS's hint says "long-press" but enables
@@ -1796,10 +1816,10 @@ unchanged.
 | captcha · wait | pushes `Route.sportCaptcha` `SportQuickOrderViewModel.swift:88-90` · `withCheckedContinuation` by UUID `:92-100` | `SportCaptchaCard` inline `SportQuickOrderView.kt:34-37` · 100 ms poll on `captchaToken` `SportQuickOrderViewModel.kt` | inline card · callback |
 | result · dismissal · error text | success `:27-29` / error `:31-33`, then `dismiss()` · `error.message ?? error.code.description` `:52` | success `:47` / error `:51-53`, then `popBackStack()` · `e.message.orEmpty()` | show result, then pop · server message, else generic fallback |
 
-**Strings:** `正在预约` `IS:736` · `很快就好` `IS:657`. Result copy is §13's.
+**Strings:** `正在预约` `IS:common.booking` · `很快就好` `IS:common.almostDone`. Result copy is §13's.
 
 **States:** unload — unreachable, submission starts in the initialiser
-(`SportQuickOrderViewModel.swift:21`) or on first composition (`SportQuickOrderView.kt:28-32`).
+(`SportQuickOrderViewModel.swift:20`) or on first composition (`SportQuickOrderView.kt:28-32`).
 loading — progress indicator. error — §13 error card with the server message; the action pops. success — §13
 success card. captcha — challenge presented, then submission resumes.
 
@@ -1839,8 +1859,8 @@ configured; a switch bound to the stored `tomorrow` flag that persists immediate
 | CTA gap · label · fill · radius · pad · label style | 16 `:43-46` · `设置` `:44` · `Color.green`@0.25 · 8 · v16 `:48-49`,`:46` · `ham_text_t1Color` `:45` | 12 `:82` · 去设置 `AS:56` `:94` · brand@0.15 · 12 · v16 `:90-91` · `bodyBold` brand `:94` | 12 · **`去设置`** · brand@0.15 · 12 · v16 · `bodyBold` brand |
 | CTA alignment · switch row | leading `:72` · `Toggle` + `预约明天` `:79-81` | centred `:92` · `HamSwitch` + `sport_reserve_tomorrow` `:103-107` | centred · labelled switch |
 
-**Strings:** `收藏预约设置` (`AS:61` value is 收藏预定设置) · `未设置` `IS:716`, `AS:55` · `去设置` `AS:56` /
-`设置` `IS:134` · `预约明天` `IS:208`, `AS:62`.
+**Strings:** `收藏预约设置` (`AS:61` value is 收藏预定设置) · `未设置` `IS:common.notSet`, `AS:55` · `去设置` `AS:56` /
+`设置` `IS:common.settings` · `预约明天` `IS:common.reserveForTomorrow`, `AS:62`.
 
 **States:** unload — configured card, or `未设置` with only the CTA. loading — none, the config is read
 synchronously (`SportStarredOrderSettingView.swift:9`; `SportStarredSeatSettingView.kt:52`). error — none
@@ -2041,7 +2061,7 @@ trailing chevron; *tap* goes straight to login if already CAS-logged-in, otherwi
 | padding · logo · link glyph · module icon · icon gap | 16 `:78` · 56×56 r12 `:38-41` · `link`, no size/tint `:43` · `sportscourt.fill` 48 brand@0.25 `SportIntoView.swift:21`,`:24` · 16 `:37` | header top 12 `:189` · 48dp r8 `:198-204` · `Link` 24 `ham_text_primary` `:205-209` · `SportsVolleyball` 48dp brand@0.25 `SportIntroView.kt:62-63` · 12 `:196` | 16 · 48 r8 · 24 `ham_text_primary` · 48 brand@0.25 · 12 |
 | header→title · title · title→subtitle · subtitle | 32 `:51-52` · `.title.bold()` 28 `:56-57` · 8 `:55` · present, body 17, no secondary colour `SportIntoView.swift:23` | 32 `:222` · `title` 24 Bold `:220-221` · 4 `:222` · **absent** — parameter omitted `SportIntroView.kt:61-63` | 32 · 24/Bold · 8 · present, `body` `text.secondary` |
 | panel pad · radius · surface · item gap | 16 `:69` · 8 `:72` · gray@0.15 `:73` · 24 `:66` | h16 outer + 16 inner `:237,241` · 12 `:239` · `ham_lightGray` #EDEEEF `:240` · 8 `:242` | 16 · 12 · #EDEEEF · 8 |
-| row icon · gap · title · subtitle · chevron · glyph | brand blue, no size `:104-105` · 8 `:106` · bold `:108-110` · `.caption` 12 `:111-114` · `chevron.right` `.gray` `:119-120` · `graduationcap.fill` `IntroView.swift:158` | 24 `ham_blue` `IntroView.kt:82-87` · 8 `:80` · `bodyBold` `:89` · `caption` `:90` · `ChevronRight` `ham_text_primary` `:93-97` · `Icons.Filled.Public` `:68` | 24 · `ham_blue` · 8 · `bodyBold` · `caption` · `text.primary` · `Public` |
+| row icon · gap · title · subtitle · chevron · glyph | brand blue, no size `:104-105` · 8 `:106` · bold `:108-110` · `.caption` 12 `:111-114` · `chevron.right` `.gray` `:119-120` · `graduationcap.fill` `IntroView.swift:143` | 24 `ham_blue` `IntroView.kt:82-87` · 8 `:80` · `bodyBold` `:89` · `caption` `:90` · `ChevronRight` `ham_text_primary` `:93-97` · `Icons.Filled.Public` `:68` | 24 · `ham_blue` · 8 · `bodyBold` · `caption` · `text.primary` · `Public` |
 | loading | none | `HamLoadingProgressBar` centred `SportIntroView.kt:111-113` | centred spinner |
 | success animation · Lottie · haptics | opacity+offset y100 `.spring()` after 0.8 s `LoginSuccessView.swift:80-94` · `lottie-congrats` once, speed 1 `:11-32` · none | `slideInVertically{it/2}+fadeIn` after `delay(500)` `SuccessView.kt:59-75` · `lottie_congrats.json` speed 1f `:52-70` · `doVibrate` `:62` | slide+fade 0.5 s · play once speed 1 · haptic |
 | success mark · title · message | `checkmark.circle.fill` 64 plain `.green` `:55-57` · `登录成功` `.title` 28 `:58-59` · **absent** | `Done` 64 on `ham_blue` circle pad 8 white `:83-91` · `title` 24 `:92` · `body` 16 `:93` | 64 on `ham_blue` circle pad 8 white · `title` 24 · present, `body` |
@@ -2057,8 +2077,9 @@ on Android**) · `从信息门户验证` `ASCOMMON:9` · `将进入武汉大学�
 **States:** idle — intro with the CAS row. already CAS-logged-in — skip CAS, go straight to login (Android
 `SportIntroView.kt:117-118`; iOS has no such branch). CAS web login — the CAS view, back returns to the intro.
 loading — centred full-screen spinner. success — Lottie, haptic, mark, title, message, button. error — full
-error step with `重新登录` returning to the intro. A second verification option exists but is commented out on
-iOS (`SportIntoView.swift:28-41`) and absent on Android.
+error step with `重新登录` returning to the intro. A second verification option is absent on both clients —
+iOS's intro builder exposes only `buildCasNavLink()` (`IntroView.swift:141-149`) and
+`SportIntoView.swift:25-28` keeps nothing commented out.
 
 **Divergence:** Android omits the subtitle (`SportIntroView.kt:61-63`); iOS has no dedicated loading or error
 step — the Android sub-route model is normative. iOS keeps the CAS branch unconditional
@@ -2103,7 +2124,7 @@ generic fallback when empty. 3 **返回** — compact; *tap* runs the caller's `
 
 | Element | iOS | Android | normative |
 |---|---|---|---|
-| container · entry animation · haptic | `ZStack` maxW/maxH `ham_bg_b1Color` `SportOrderSuccessView.swift:130-131` · opacity+offset y100 `.spring()` after 0.8 s `:125-141` · `ImpactManager…heavy` `:138` | `Box` fillMaxSize `ham_bg_b1` `SportOrderSuccessCard.kt:81-83` · `slideInVertically{it/2}+fadeIn` after `delay(500)` `:72-88` · `DeviceManager.doVibrate` `:76` | fillMaxSize `ham_bg_b1` · slide + fade 0.5 s · haptic |
+| container · entry animation · haptic | `ZStack` maxW/maxH `ham_bg_b1Color` `SportOrderSuccessView.swift:123-124` · opacity+offset y100 `.spring()` after 0.8 s `:118-120,127` · `ImpactManager…heavy` `:131` | `Box` fillMaxSize `ham_bg_b1` `SportOrderSuccessCard.kt:81-83` · `slideInVertically{it/2}+fadeIn` after `delay(500)` `:72-88` · `DeviceManager.doVibrate` `:76` | fillMaxSize `ham_bg_b1` · slide + fade 0.5 s · haptic |
 | mark · title · hint | `checkmark.circle.fill` 64 plain `.green` `:34-36` · `预约成功` `.title` 28 `:37-38` · `.caption` when non-empty `:40-43` | `Done` 64 on `ham_blue` circle pad 8 white `:98-106` · `sport_select_order_success` `title` 24 `:107`, `AS:72` · none | 64 on `ham_blue` circle pad 8 white · `title` 24 · `caption` when supplied |
 | title→card gap · card radius · brand rail | 16 `:45` · 8 `:99-103` · `Color.blue` 16 wide, leading `overlay` `:102` | 8 `:108` · `HamCardView` 16 `:109` · none | 8 · 8 · 16-wide brand rail |
 | card pad · surface · title | trailing 8, top 8, leading 28, vertical 8 `:93-96` · `ham_bg_b2Color` `:98-101` · none | card 16 · `ham_bg_b2` · `预约信息` `AS:73`, `:109` | leading 28, else 8 · `ham_bg_b2` · `预约信息` |
@@ -2119,9 +2140,8 @@ generic fallback when empty. 3 **返回** — compact; *tap* runs the caller's `
 | title · hint | `预约失败` `.title` 28 `:26-27` · `.caption` when non-empty `:29-32` | none, raw message only `:47` · `body` `ham_text_secondary`, falls back to `遇到了错误` `:47`, `AS:79` | `预约失败` `title` 24 · `body` `text.secondary` with fallback |
 | button gap · label · button | 32 `:34` · `返回` bold `:39-40` · pad 16 maxW 350 `Color.blue`@0.15 r12 blue label `:41-45` | 2 `:49` · `sport_select_back` `AS:78`, `:58` · w128 `ham_gray`@0.2 r8 pad v16 `body` `ham_gray` `:52-61` | 16 · `返回` · w128 `ham_gray`@0.2 r8 pad v16 |
 
-**Strings:** `预约成功` `IS:857`, `AS:72` · `预约失败` `IS:856` · `预约信息` `AS:73` · `请于%1$s前完成支付`
-`IS:802`, `AS:74` · `当前未处于可支付时间` `IS:655` · `请于%1$s-%2$s完成支付` `IS:801` · `去支付` `IS:594`, `AS:76` ·
-`完成` `IS:630`, `AS:77` / `返回` `IS:830` · `遇到了错误` `IS:384`, `AS:79`.
+**Strings:** `预约成功` `IS:common.bookingSuccessful` (iOS ships `预定成功` — see Terminology below), `AS:72` · `预约失败` `IS:common.bookingFailed` (ships `预定失败`) · `预约信息` `AS:73` · `请于%@前完成支付` `IS:common.pleasePayBefore` / `请于%1$s前完成支付` `AS:74` · `当前未处于可支付时间` `IS:status.paymentNotAvailableNow` · `请于%@-%@完成支付` `IS:common.pleasePayBetween` · `去支付` `IS:status.payNow`, `AS:76` ·
+`完成` `IS:print.printPrepareView.done`, `AS:77` / `返回` `IS:common.back` · `遇到了错误` `IS:shared.toastUtils.somethingWentWrong`, `AS:79`.
 
 **States:** unload — unreachable, the card replaces the booking screen when the order resolves. loading — none,
 the caller owns the spinner. error — error card with the caller's message; `返回` pops. success — success card;
@@ -2135,7 +2155,7 @@ success button reads `返回` on iOS (`:110`) and `完成` on Android (`AS:77`) 
 iOS has no error title and no empty-message fallback; Android has the fallback but no heading, showing only the
 raw server message — the spec requires a `预约失败` heading plus the message. iOS's success card and §1's
 current-order card render the payment block with slightly different padding; they must share one component.
-**Terminology:** `预定成功` (`AS:72`, `IS:857`) → **`预约成功`**; `预定失败` (`IS:856`) → **`预约失败`**.
+**Terminology:** `预定成功` (`AS:72`, `IS:common.bookingSuccessful`) → **`预约成功`**; `预定失败` (`IS:common.bookingFailed`) → **`预约失败`**.
 
 
 ## 6. Score (成绩 Score)
@@ -2171,7 +2191,7 @@ foreground → re-authenticate (`:55-65`; `ON_STOP`/`ON_START` `AND/score/ui/Sco
 
 | Element | iOS | Android | normative |
 |---|---|---|---|
-| Nav title · page bg | `成绩` inline `:32-33` · `ham_bg_b1Color` `ScoreMainView.swift:87` | `score_title` on Main `ScoreMainView.kt:102` · `ham_bg_b1` `:199` | `成绩` inline · `surface.primary` |
+| Nav title · page bg | `成绩` inline `:32-33` · `ham_bg_b1Color` `ScoreMainView.swift:82` | `score_title` on Main `ScoreMainView.kt:102` · `ham_bg_b1` `:199` | `成绩` inline · `surface.primary` |
 | Gate transition · auto-sheet delay · re-lock | `withAnimation` `:39-41` · 300 ms `ScoreViewModel.swift:24` · `scenePhase == .background` `:62-64` | `fadeIn()+fadeOut()` `:80` · 500 ms `:47` · `ON_STOP` `:56-58` | cross-fade · **300 ms** · platform background signal |
 **Strings:** `成绩` · `连接成绩` · `保护你的成绩数据` (biometric reason) · `请重新验证` ·
 `你已开启成绩保护，请开启生物认证权限` · `验证失败`.
@@ -2309,7 +2329,7 @@ recents screenshot. The blur is normative; Android must add it.
 **Purpose:** Authenticate against the education portal (CAS), solve the captcha, pull the score list.
 The same composable is reused as the first-run connect flow (§6), retitled.
 **Entry:** 获取成绩 tile (`ScoreMainViewFunctionCard.swift:14-20`, `…FunctionCard.kt:54-61`) → sheet
-(`ScoreMainView.swift:66-70`, `ScoreMainView.kt:251`); or auto-presented by the root (§1).
+(`ScoreMainView.swift:66-70`, `ScoreMainView.kt:135,256`); or auto-presented by the root (§1).
 **Layout:**
 ```
 iOS IntroView shell · Android HamSheet + nested NavHost    (ScoreMainViewUpdateScoreSheet.kt:57–:61)
@@ -2328,7 +2348,7 @@ iOS states: captcha → ProgressView + 正在更新 → SuccessView(更新成功
 `从信息门户登录教务系统获取成绩`, chevron (`ScoreMainViewUpdateScoreSheet.kt:226-240`). COND iOS branches at
 build time on `CasConfig.shared.enabled()` (`ScoreUpdateView.swift:23-31`); Android always renders one row
 and branches at tap time (`:231-239`). TAP `useCas` → captcha, else → CAS login.
-2 **CAS login** — `CasMobileLoginView` (`IntroView.swift:162`; `PATH_CAS` `:108-118`).
+2 **CAS login** — `CasMobileLoginView` (`IntroView.swift:147`).
 3 **Captcha** — bundled `education-captcha-page.html` in a web view, token via the JS bridge
 (`EducationCaptchaView.swift:18,31`; `ScoreMainViewUpdateScoreCasCaptchaWebView.kt:20-29`); chrome is a
 titled page `验证码验证`, no bounce scroll. 4 **In progress** — centred spinner + `正在更新`.
@@ -2495,12 +2515,12 @@ unavailable. 3 COND unavailable → red 12 hint beneath the label (`:84-88`). 4 
 | Element | iOS | Android | normative |
 |---|---|---|---|
 | Lock icon · label | `lock.fill` 48 `:22-24` · `开启Face ID保护你的成绩数据` `:26` | `Lock` 72 `ham_gray` `:70-77` · `使用生物识别保护成绩` `:81-83` | **72** · "开启{platform biometric}保护你的成绩数据" |
-| Unavailable hint · seed | none — auto-dismisses `:57-61` · hard `false` `:10` | `无法访问…` `caption` `ham_red` `:85-87` · `canUseFaceId` `:50` | red 12 hint, switch disabled · **availability** |
+| Unavailable hint · seed | none — auto-dismisses `:54-58` · hard `false` `:10` | `无法访问…` `caption` `ham_red` `:85-87` · `canUseFaceId` `:50` | red 12 hint, switch disabled · **availability** |
 | Commit guard · button | only when `.permitted` `:35-37` · maxW 350, r8, blue stroke `:40-52` | always `:102` · 48, r12, `accent.subtle` `:101-115` | **only when permitted** · 48, h16 v12, r12, `accent.subtle`, 17/Bold `accent` |
 **Strings:** `开启Face ID保护你的成绩数据` · `使用生物识别保护成绩` · `无法访问你的生物识别模块` · `确定`.
 **States:** loading / empty — n/a · error — the unavailable-hint branch.
 **Divergence:** iOS self-dismisses on devices that cannot authenticate
-(`ScoreIntroFaceIdEnableView.swift:57-61`); Android stays with a disabled switch and a hint.
+(`ScoreIntroFaceIdEnableView.swift:54-58`); Android stays with a disabled switch and a hint.
 
 ---
 
@@ -2538,7 +2558,7 @@ are resources (`SCSTR:24,26,27`). iOS supplies a localizedReason to the system p
 **Entry:** `选择计算方式` on the Settings F2 card → `scoreJsCalc` / `ScoreRoutes.JsF2Edit`
 (`ScoreGraph.kt:31`); detail via the RN event `ScoreJsCalcViewOpenDetail`.
 **Layout — picker:** the RN module `RNScoreCalcView` fills the screen under a native nav title
-`选择计算方式` (`iOS/score/js-f2/ScoreJsCalcView.swift:18-20`; `AND/score/ui/scorecalc/ScoreJsCalcView.kt:36-41`).
+`选择计算方式` (`iOS/score/js-f2/ScoreJsCalcView.swift:18-20`; `AND/score/ui/scorecalc/ScoreJsCalcView.kt:34-36`).
 No layout values — the body is 100 % RN and its strings live in the RN bundle
 (`RN/src/i18n/zh/translation.json`, namespace `scorecalc`), not in the native string files.
 **Layout — detail:**
@@ -2673,15 +2693,15 @@ scores, hide — `:65`, `:213-232`, `CSAOS/ui/CourseScoreViewModel.kt:60-63`).
 | Warning icon / text | `xmark.circle.fill` `:69` / `.red` 12 `:74,78` | `Close` 16 on circle `:239-247` / `ham_red` `:251-257` | `icon.sm` 20 `text.danger`; message 17 / Regular + subtitle 12 / Regular, both `text.danger` |
 | Server description | CCKV `.courseScoreEnableDescription` `:18,80` | CCKV `CourseScoreEnableDescription` `:63` | CCKV-driven, not localized |
 
-**Strings:** `取消` (`LS:237`/`STR:9`) · `权限请求` (`LS:723`/`STR:10`) ·
-`"给分"需要使用你的成绩数据` (`LS:870`) · `使用"给分"前Ham会自动将你的成绩数据匿名发送到Ham的服务器上，作为该功能的数据来源。`
-(`LS:544`/`STR:11`) · `你的以下信息将会被上传到服务器` (`LS:535`/`STR:12`) ·
-`- **学号不可逆特征值** 用于下次更新数据` (`LS:484`; Android splits `STR:13`+`STR:14`) ·
-`- **脱敏成绩信息** 用以提供数据` (`LS:485`; `STR:15`+`STR:16`) · `- **设备信息** 辨别你是否正常使用Ham`
-(`LS:486`; `STR:17`+`STR:18`) · `数据库里的成绩信息不能逆向定位到任何一个人，Ham也不会将这些成绩作为非法用途`
-(`LS:678`/`STR:19`) · `同意后，每次使用"给分"前，Ham会自动上传你的成绩信息。` (`LS:604`/`STR:20`) ·
-`授权` (`LS:670`/`STR:21`) · `你尚未获取成绩信息，因此无法使用"给分"` (`LS:533`/`STR:22`) ·
-`请前往"成绩"页面获取成绩后重试` (`LS:803`/`STR:23`).
+**Strings:** `取消` (`LS:common.cancel`/`STR:9`) · `权限请求` (`LS:coursescore.intro.permissionRequest`/`STR:10`) ·
+`"给分"需要使用你的成绩数据` (`LS:common.gradingNeedsYourScoreData`) · `使用"给分"前Ham会自动将你的成绩数据匿名发送到Ham的服务器上，作为该功能的数据来源。`
+(`LS:common.beforeUsingGradingHamWill`/`STR:11`) · `你的以下信息将会被上传到服务器` (`LS:coursescore.intro.theFollowingInfoWillBe`/`STR:12`) ·
+`- **学号不可逆特征值** 用于下次更新数据` (`LS:coursescore.intro.irreversibleStudentIdHashFor`; Android splits `STR:13`+`STR:14`) ·
+`- **脱敏成绩信息** 用以提供数据` (`LS:coursescore.intro.anonymizedGradesUsedToProvide`; `STR:15`+`STR:16`) · `- **设备信息** 辨别你是否正常使用Ham`
+(`LS:coursescore.intro.deviceInfoToVerifyNormal`; `STR:17`+`STR:18`) · `数据库里的成绩信息不能逆向定位到任何一个人，Ham也不会将这些成绩作为非法用途`
+(`LS:coursescore.intro.scoresInTheDatabaseCannot`/`STR:19`) · `同意后，每次使用"给分"前，Ham会自动上传你的成绩信息。` (`LS:common.afterAgreeingHamWillUpload`/`STR:20`) ·
+`授权` (`LS:coursescore.intro.authorize`/`STR:21`) · `你尚未获取成绩信息，因此无法使用"给分"` (`LS:common.youHavenTFetchedScores`/`STR:22`) ·
+`请前往"成绩"页面获取成绩后重试` (`LS:common.goToScoresToFetch`/`STR:23`).
 
 **States:** `hasFetchScore ? 授权 : warning`. No loading state. Consent writes back
 (`CourseScoreConfig.shared.permissionAgreed = true`, `CourseScoreView.swift:42`). Entry requires
@@ -2732,11 +2752,11 @@ rows **tappable** → open the URL, logs `promotion_btn` —
 | Chip radius / pad / fill | `8` `…HistoryItem.swift:29` / h8 v6 `:26-27` / gray@0.15 `:28` | `10.dp` `:158` / h4 `:160` / `ham_gray`@0.2 `:159` | **6** / **h6 v4** / `text.secondary`@0.10 |
 | Chip label / line limit / icon | 17 @0.65 `:25` / `1` `:23` / `text.book.closed.fill`, gap 4 `:20-21` | `16.sp` secondary `:174` / none / `Book` @18, gap 2 `:161-173` | **12 / Bold `text.secondary`** / **1** / `icon.sm` **20**, gap **4** |
 | `其他服务` header | bold, gap 8 `…ExternalServiceCard.swift:30-32` | **absent** | 17 / Bold, gap 8 — **present on both** |
-| Service row | icon 20 on a 40 circle @0.1, title semibold, subtitle 12 gray, chevron `MyViewSettingCard.swift:211-244` | absent | as iOS; card r16 pad16 |
+| Service row | icon 20 on a 40 circle @0.1, title semibold, subtitle 12 gray, chevron `MyViewSettingCard.swift:212-238` | absent | as iOS; card r16 pad16 |
 | `我的数据` | `person.fill` + bold, gap 4, brand `CourseScoreHomeView.swift:54-61` | `Person` + `bodyBold`, gap 4, brand `:81-95` | `icon.md` 24 + 17 / Bold, gap 4, `brand.coursescore` |
 
-**Strings:** `给分` (`LS:51,317`/`STR:3`) · `我的数据` (`LS:877`/`STR:4`) · `搜索` (`LS:672`/`STR:5`) ·
-`其他服务` (`LS:872`) · external titles/subtitles from CCKV JSON keyed by locale
+**Strings:** `给分` (`LS:common.grade`/`STR:3`) · `我的数据` (`LS:coursescore.coursecenter.myData`/`STR:4`) · `搜索` (`LS:coursescore.home.search`/`STR:5`) ·
+`其他服务` (`LS:coursescore.home.otherServices`) · external titles/subtitles from CCKV JSON keyed by locale
 (`…ExternalServiceCard.swift:20-23`) · history keywords are user data.
 
 **States:** empty history → the cloud collapses to zero height, no placeholder · empty external
@@ -2783,7 +2803,7 @@ pagination fires on the second-to-last card — `CourseScoreResultView.swift:26-
 
 | Element | iOS | Android | Normative |
 | --- | --- | --- | --- |
-| Placeholder | `输入关键词` `…SearchBar.swift:30`, `LS:820` | `输入课程名或授课人` `:80`, `STR:6` | **`输入课程名或授课人`** |
+| Placeholder | `输入关键词` `…SearchBar.swift:30`, `LS:coursescore.search.enterKeywords` | `输入课程名或授课人` `:80`, `STR:6` | **`输入课程名或授课人`** |
 | Field font / row padding | `.system(20)` `:55` / none + 16 spacer `:57-58` | default `:80-87` / v `8.dp` `:56` | 20 / Regular / **v 8** |
 | Clear icon | `multiply.circle.fill`, trailing 8 `:47-49` | `Clear` 18 on `ham_gray` circle, end 8 `:96-105` | `icon.sm` 20, margin 8, min 44 target |
 | Row gap / h-padding | `8` `…SearchResultBody.swift:17` / ≈16 `:22` | `8.dp` `:112` / `12.dp` `CourseScoreSearchItemView.kt:42` | 8 / **16** |
@@ -2793,7 +2813,7 @@ pagination fires on the second-to-last card — `CourseScoreResultView.swift:26-
 | Header fill / shadow / icon | `ham_bg_b1`+gray@0.1 `:41-44` / `.gray`@0.5 r16 `:46` / `magnifyingglass` 20 `:32-33` | `ham_gray`@0.1 over `ham_bg_b1` `:95,99` / elevation 15 `:94` / `Search` 24, gap 4 `:106-112` | `surface.secondary` + `text.secondary`@0.10 / elevation 15 / `icon.sm` 20, gap 4 |
 | Chip radius / pad / font | `6` `:75` / h6 v4 `:69-70` / `.caption` 12 `:68` | `6.dp` `:71` / h6 v4 `:73` / `caption` 12 `:75` | **6** / h6 v4 / **12 / Bold** |
 | Chip colours | selected `.blue`, unselected `.gray` `:63` | `ham_blue` / `ham_gray` `:67` | selected `accent`@0.10 + `accent`; unselected `text.secondary`@0.10 + `text.secondary` |
-| Chip gate / order / default | none / totalDesc, scoreDesc, medianDesc `:53-55` / `.totalDesc` `result/CourseScoreResultViewModel.swift:24` | CCKV `enableSearchResultFilter` `:125` / same / same | **always** / 人数倒序, 均分倒序, 中位数倒序 / **人数倒序** |
+| Chip gate / order / default | none / totalDesc, scoreDesc, medianDesc `:53-55` / `.totalDesc` `result/CourseScoreResultViewModel.swift:23` | CCKV `enableSearchResultFilter` `:125` / same / same | **always** / 人数倒序, 均分倒序, 中位数倒序 / **人数倒序** |
 | List gap / padding / card padding | `8` `…ResultViewBody.swift:21` / ≈16 `CourseScoreResultView.swift:30` / `HamCardView` 16 `CourseScoreSingleCard.swift:36` | `8.dp` `:219-221` / 16 `:219-221` / `padding(0)` + 12 insets `:272,280-283` | 8 / 16 / **16 uniform** |
 | Name / instructor / gap to stats | bold, 1 line `:40-41` / 12 `:42-43` / `16` `:46` | 16 Bold, 2 lines `:286-292` / 12 `:293` / `8.dp` `:294` | 17 / Bold **2 lines** / 12 / Regular `text.secondary` / **8** |
 | Range row gap / label width / format | `4` `:49` / `45`, 11 `:132-134` / `"\(from)-\(to)"` hardcoded `:52` | `2.dp` `:297` / `48.dp`, 12 `:311-319` / `"${from}-${to}"` hardcoded `:312` | 4 / **48**, 12 / Regular tabular / **one localized `%1$d-%2$d`** |
@@ -2804,10 +2824,9 @@ pagination fires on the second-to-last card — `CourseScoreResultView.swift:26-
 | Share / comment buttons | `square.and.arrow.up.fill` 16 / `bubble.left.and.bubble.right.fill` 14, both on a 32×32 r8 gray@0.2 plate, offsets (−16,16) and (−16,−16) `:81-125` | `IosShare` / `Forum` 20 on r8 chips, top/end 12 and bottom/end 12 `:375-423` | `icon.sm` 20, 32 target, 12 from top/end and bottom/end |
 | Bottom spacer | none | `navigationBarHeight + 24.dp` `:257` | `navigationBarHeight + 24` |
 
-**Strings:** `人数倒序` (`LS:871`/`STR:36`) · `均分倒序` (`LS:874`/`STR:37`) · `中位数倒序`
-(`LS:520`/`STR:38`) · `未知倒序` (`LS:878` — 4th default case, Android absent) ·
-`%1$d位同学的成绩` (`LS:477`/`STR:45`) · `均分` (`LS:275`/`STR:46`) · `中位数: %1$s`
-(`LS:519`/`STR:47`) · `%1$s-%2$s的给分数据` (`LS:467`/`STR:34`) · `分享到` (`STR:44`) ·
+**Strings:** `人数倒序` (`LS:coursescore.result.totalDesc`/`STR:36`) · `均分倒序` (`LS:coursescore.result.averageDesc`/`STR:37`) · `中位数倒序`
+(`LS:coursescore.result.medianDescending`/`STR:38`) · `未知倒序` (`LS:coursescore.result.unknownDesc` — 4th default case, Android absent) ·
+`%lld位同学的成绩` (`LS:coursescore.coursedetail.scoresFromStudents`) / `%1$d位同学的成绩` (`STR:45`) · `均分` (`LS:coursescore.coursedetail.average`/`STR:46`) · `中位数: %@` (`LS:coursescore.coursedetail.median`) / `中位数: %1$s` (`STR:47`) · `%@-%@的给分数据` (`LS:coursescore.result.gradingDataFor`) / `%1$s-%2$s的给分数据` (`STR:34`) · `分享到` (`STR:44`) ·
 `来自Ham` (`STR:35`).
 
 **Share** — system share sheet on both. URL
@@ -2881,9 +2900,9 @@ Five stacked cards · gap 16 · page padding 16 · bottom 32 · `surface.primary
 | Element | iOS | Android | Normative |
 | --- | --- | --- | --- |
 | List | `LazyVStack(spacing: 16)` `:60` | `LazyColumn(spacing 16, contentPadding v32 h16)` `CSAOS/ui/detail/CourseScoreCourseDetailView.kt:117-120` | gap 16, padding h16 v32 |
-| Background / nav title | `ham_bg_b1Color` `:44` / `课程详情` `:46`, `LS:815` | inherited / `course_score_course_detail_title` `:60` | `surface.primary` / `课程详情` |
+| Background / nav title | `ham_bg_b1Color` `:44` / `课程详情` `:46`, `LS:coursescore.coursedetail.courseDetails` | inherited / `course_score_course_detail_title` `:60` | `surface.primary` / `课程详情` |
 | Loading / error | `ProgressView` with no response `:29-34` / `CourseScoreCourseDetailErrorView { vm.fetchData() }` `:25-28` | same / same, but takes **no message** `ui/detail/CourseScoreCourseDetailErrorView.kt` | centred spinner, full page / empty-state icon `icon.xl` 64 `text.tertiary`; title 17 / Bold; subtitle 12 / Regular = server message when present else `试试重新请求呢`; retry tinted button h48 r12 |
-| Refresh signal | `.ham_courseDetailShouldRefresh` `…ViewModel.swift:28-37` | `NotificationChannel.CourseDetailNeedRefresh` | refresh on the notification |
+| Refresh signal | `.ham_courseDetailShouldRefresh` `…ViewModel.swift:28-37` | `KEY_COURSE_DETAIL_REFRESH` navigation result (`CourseDetailRefresh.kt:11`) | refresh on the notification |
 
 **① Stat card** — `CSIOS/coursedetail/component/CourseScoreCourseDetailCourseGradeStatCard.swift`,
 `CSAOS/ui/detail/component/CourseScoreCourseDetailViewStatCard.kt`
@@ -2966,12 +2985,11 @@ Five stacked cards · gap 16 · page padding 16 · bottom 32 · `surface.primary
 | `收获%1$d个` / divider | + `hand.thumbsup.fill` 12, gap 0 `:35-39` / only when rating **and** comment exist `:45` | + `ThumbUp` 12.dp, gap 4 `:92-106` / `comment_info != null && rate_info != null` `:40` | 12 / Regular + `icon.xs` thumb, gap 4 / only when both exist |
 | Comment body / time | body + `ham_toyyyymmddhhmm` 12 secondary, gap 8 `:50-54` | same, gap 4 `:47-57,168` | gap 4 |
 
-**Strings:** `课程详情` (`LS:815`) · `%1$d位同学的成绩` (`LS:477`/`STR:45`) · `均分`
-(`LS:275`/`STR:46`) · `中位数: %1$s` (`LS:519`/`STR:47`) · `%1$d-%2$d学期` (`LS:869`/`STR:39`) ·
-`全部` (`LS:563`/`STR:43`) · `评分` · `平均` (`LS:649`/`STR:49`) · `%1$d位同学的评分`
-(`LS:478`/`STR:50`) · `%1$d人想上这门课` (`LS:476`/`STR:51`) · `评论 %1$d` (`LS:794`/`STR:52`) ·
-`暂无评论` (`LS:701`/`STR:53`) · `查看全部` (`LS:724`/`STR:56`) · `你的评价` (`LS:541`/`STR:57`) ·
-`未评分` (`LS:717`/`STR:58`) · `收获%1$d个` (`LS:673`/`STR:73`) · `试试重新请求呢`.
+**Strings:** `课程详情` (`LS:coursescore.coursedetail.courseDetails`) · `%lld位同学的成绩` (`LS:coursescore.coursedetail.scoresFromStudents`) / `%1$d位同学的成绩` (`STR:45`) · `均分`
+(`LS:coursescore.coursedetail.average`/`STR:46`) · `中位数: %@` (`LS:coursescore.coursedetail.median`) / `中位数: %1$s` (`STR:47`) · `%@-%@学期` (`LS:coursescore.coursedetail.term`) / `%1$d-%2$d学期` (`STR:67`) ·
+`全部` (`LS:common.all`/`STR:68`) · `评分` · `平均` (`LS:coursescore.average`/`STR:66`) · `%lld位同学的评分` (`LS:coursescore.coursedetail.ratingsFromStudents`) / `%1$d位同学的评分` (`STR:43`) · `%lld人想上这门课` (`LS:coursescore.coursedetail.wantThisCourse`) / `%1$d人想上这门课` (`STR:69`) · `评论 %lld` (`LS:coursescore.coursedetail.comments`) / `评论 %1$d` (`STR:53`) ·
+`暂无评论` (`LS:coursescore.coursedetail.noComments`/`STR:55`) · `查看全部` (`LS:common.viewAll`/`STR:61`) · `你的评价` (`LS:coursescore.coursedetail.yourReview`/`STR:62`) ·
+`未评分` (`LS:coursescore.coursedetail.notRated`/`STR:63`) · `收获%lld个` (`LS:coursescore.coursedetail.received`) / `收获%1$d个` (`STR:64`) · `试试重新请求呢`.
 
 `Divergence:` Android renders two-decimal averages (`…ViewRateCard.kt:112`), derives the star count
 from data, uses a 172 dp watermark, larger stars (32.dp self-review, 16.dp comment, untinted),
@@ -3058,7 +3076,7 @@ stripped — `:152-167`; `:150-165`) · 8. **counter** (always — `:197-199`; `
 | Initial star | `star == 0 ? 5 : star` `…CreateReviewViewModel.swift:34` | `initStar.takeIf { it > 0 } ?: 5` `CourseCommentCreateViewModel.kt:51` | **5** when unset |
 | `canRate` / `canComment` | `star == 0` / `comment.isEmpty` `:37-38` | `initStar == 0` / `initComment.isEmpty()` `:52,56` | rating editable when no incoming star; comment editable when no incoming comment |
 | Submit | rate then comment; guard re-entrancy `:42-51,63-81` | rate then comment, each clearing its own flag `:90-134` | rate first, then comment; guard re-entrancy; validate the comment length only when the comment is editable |
-| Post-success | `.ham_courseDetailShouldRefresh` `:92` | `NotificationChannel.CourseDetailNeedRefresh` `:68` | notify the detail screen to refresh, then dismiss |
+| Post-success | `.ham_courseDetailShouldRefresh` `:92` | `KEY_COURSE_DETAIL_REFRESH` — set from `CourseCommentCreateViewModel.kt:65,74` | notify the detail screen to refresh, then dismiss |
 
 **Strings:** `创建评价` · `发布` · `点击/滑动评分` · `你给这门课程评过分了，不如去填写评价呢` ·
 `你评论过该课程了，不如去评下分呢` · `评论需满足%1$d-%2$d字，当前%3$d字` · `发布一条课程评价吧～` ·
@@ -3105,7 +3123,7 @@ message + `重试` — `:51-54`; `:70-90`).
 
 | Element | iOS | Android | Normative |
 | --- | --- | --- | --- |
-| Nav title / background / container | `我的数据` `:18`, `LS:877` / `ham_bg_b1Color` `:17` / `ScrollView` + `.padding()` `:28,47` | `course_score_my_data` `:55` / inherited / `LazyColumn` gap 16, h-pad 16, bottom 16, top `statusBar + 64` `:98-109` | `我的数据` / `surface.primary` / list gap 16, h-pad 16 |
+| Nav title / background / container | `我的数据` `:18`, `LS:coursescore.coursecenter.myData` / `ham_bg_b1Color` `:17` / `ScrollView` + `.padding()` `:28,47` | `course_score_my_data` `:55` / inherited / `LazyColumn` gap 16, h-pad 16, bottom 16, top `statusBar + 64` `:98-109` | `我的数据` / `surface.primary` / list gap 16, h-pad 16 |
 | Brief: avatar / fallback | `WebImage` 64×64 circle, fade 0.5 `CourseCenterUserInfoView.swift:19-34` / gray@0.2 + `person.fill` 32 `:22-29` | `SubcomposeAsyncImage` 64 `CourseCenterBriefCardView.kt:65-91` / `ham_gray`@0.2 + `Person` 32 `:73-87` | 64×64 circle, cross-fade / `surface.tertiary` + person `icon.lg` 32 |
 | Brief: row gap / name / desc | `16` `:18` / `.title2` 22 Bold `:37-39` / `.caption` 12 gray 3 lines `:42-46` | `16.dp` `:62` / `title2` `:93-97` / `caption` secondary 3 lines `:99-106` | 16 / `title2` 22 / Bold / 12 / Regular `text.secondary`, 3 lines |
 | Brief: tap / background | none `:17-52` / none | `UserCenterPath.MAIN` `:59` / server `background_color` else `ham_blue`@0.1 `:53-56` | **not tappable** / `surface.secondary` |
@@ -3125,10 +3143,10 @@ message + `重试` — `:51-54`; `:70-90`).
 | Comment: stars / column / body / time | `star.fill` 16×16 `.orange`, gap 4 `:45-49` / width 80 trailing, lead pad 12 `:51-52` / `body` / 12 `t2Color`, gap 4 `:56-62` | `Star` 16.dp `ham_orange` `:156-163` / width 80, start 12, `Arrangement.End` `:150-155` / `body` + top pad 8 / 12 `:169-179` | `icon.sm` 16 **`brand.score`**, gap 4 / width 80 trailing, gap 12 / body 17 / Regular / 12 / Regular `text.secondary`, gap 4 |
 | Error message | — | raw gRPC `e.message` `CourseCenterViewModel.kt:50` | a localized generic message, not gRPC text |
 
-**Strings:** `我的数据` (`LS:877`/`STR:4`) · `成绩排行` (`LS:646`/`STR:80`) · `想上` · `我的评价` ·
-`查看全部` (`LS:724`/`STR:56`) · `你的分数` (`STR:73`) · `前%1$.1f%%` (`STR:74`) ·
+**Strings:** `我的数据` (`LS:coursescore.coursecenter.myData`/`STR:4`) · `成绩排行` (`LS:coursescore.coursecenter.scoreRanking`/`STR:80`) · `想上` · `我的评价` ·
+`查看全部` (`LS:common.viewAll`/`STR:61`) · `你的分数` (`STR:73`) · `前%1$.1f%%` (`STR:74`) ·
 `没有已上传的成绩记录` (`STR:72`) · `没有想上课程记录` (`STR:76`) · `没有课程评论历史记录`
-(`STR:75`) · `请求失败` (`STR:70`) · `重试` (`STR:71`).
+(`STR:75`) · `请求失败` (`STR:70`) · `重试` (`STR:50`).
 
 ### 2.8 Course-center sub-pages (成绩排行 / 想上历史 / 评论历史)
 
@@ -3148,7 +3166,7 @@ message + `重试` — `:51-54`; `:70-90`).
 
 **Blocks** — 1. **nav title** (always) · 2. **item list** (one card per item, using the row layouts
 from §2.7) · 3. **pagination trigger** (second-to-last item — `i == itemList.count - 2`
-`CSIOS/coursecenter/rank/CourseCenterScoreRankPageView.swift:44`;
+`CSIOS/coursecenter/rank/CourseCenterScoreRankPageView.swift:25`;
 `it === list.getOrNull(size - 2)` `CSAOS/rank/CourseCenterRankView.kt:98`) · 4. **first-page
 spinner** (loading with an empty list) · 5. **trailing spinner + divider** (while paginating).
 
@@ -3159,7 +3177,7 @@ spinner** (loading with an empty list) · 5. **trailing spinner + divider** (whi
 | Item wrapping | bare rows | rank `:102` and want `:96` wrap in `HamCardView`; comment history `:103` does **not** | **every item wrapped in a card**: r16, pad 16 |
 | Gap / pagination | `16` / `count - 2` | `16.dp` / `size - 2` | 16 / second-to-last item |
 
-**Strings:** `成绩排行` (`LS:646`/`STR:80`) · `想上历史` (`STR:77`) · `评论历史` (`STR:78`).
+**Strings:** `成绩排行` (`LS:coursescore.coursecenter.scoreRanking`/`STR:80`) · `想上历史` (`STR:77`) · `评论历史` (`STR:81`).
 
 ---
 
@@ -3172,8 +3190,8 @@ spinner** (loading with an empty list) · 5. **trailing spinner + divider** (whi
 | 4 | Sport chip has no explicit fill → white-on-white in dark mode | `IOS/card/sport/StatusSportCardView.swift:26-28` |
 | 5 | Card ordering unstable on ties — no secondary sort key on either platform | `IOS/StatusContentViewModel.swift:155-158`; `AOS/utils/StatusViewCardScoreManager.kt:88-91` |
 | 6 | Android course card never publishes a score, so it sinks | `AOS/component/course/CourseCardViewModel.kt:76` |
-| 7 | Android weather card publishes nothing on failure, so a failing card sinks | `AOS/component/weather/WeatherCardViewModel.kt:84` |
-| 8 | Android computes `weekProgress` and never renders it | `AOS/component/course/CourseCardViewModel.kt:135` |
+| 7 | Android weather card publishes nothing on failure, so a failing card sinks | `AOS/component/weather/WeatherCardViewModel.kt:89` |
+| 8 | Android computes `weekProgress` and never renders it | `AOS/component/course/CourseCardViewModel.kt:43,132` |
 | 9 | Course view-toggle labels inverted between platforms | `IOS/card/course/StatusCourseCard.swift:81`; `AOS/component/course/CourseCard.kt:378-380` |
 | 10 | iOS bus card's 60 s refresh loop defined but never started | `IOS/card/bus/StatusBusCardViewModel.swift:53-64` |
 | 11 | Library countdown cadence and rounding differ (1 s / ceil vs 10 s / floor; 1 h vs 2 h) | `StatusLibraryCardReserveInfoView.swift:57-78`; `AOS/component/library/LibraryCard.kt:207-250` |
@@ -3182,7 +3200,7 @@ spinner** (loading with an empty list) · 5. **trailing spinner + divider** (whi
 | 14 | Android match flow returns before assigning the comment config holder; its error view cannot show a server message | `CSAOS/ui/detail/CourseScoreCourseDetailMatchViewModel.kt:65-67`; `…/CourseScoreCourseDetailErrorView.kt` |
 | 15 | Android create-review hides the counter **and** skips validation when config is null | `CSAOS/ui/comment/create/CourseCommentCreateView.kt:174`; `…CreateViewModel.kt:77-79` |
 | 16 | Android status page sets no background, falling through to `0xFFFFFBFE` | `AOS/StatusContainerView.kt:72` |
-| 17 | Dead code: `ScheduleCard.kt` (empty stub, zero call sites), `WeatherCard.kt` (second weather card), `StatusScheduleCard.swift:213-242`, `StatusLibraryCardModifyBookingTimeButton.swift`, `CourseCommentMainView.kt` (mock-only) | `AOS/component/schedule/ScheduleCard.kt:21`; `AOS/component/weather/WeatherCard.kt:69` |
+| 17 | Dead code: `CourseCommentMainView.kt` — mock-only (`pageCount = { 10 }` at `:123-125`), `internal` and reached only from its own `@Preview` (`:259-263`) | `CSAOS/ui/comment/CourseCommentMainView.kt:122` |
 | 18 | Search-hit parsing: iOS force-unwraps (`range(of:)!`), Android swallows exceptions silently | `CSIOS/search/cell/CourseScoreSearchViewSearchResultItem.swift:43,48`; `CSAOS/ui/search/CourseScoreSearchHitUtils.kt:33` |
 
 
@@ -3198,7 +3216,7 @@ disagree. Token names follow `docs/design-system.md` §2. `pt` and `dp` are 1:1.
 | # | Screen | iOS | Android |
 |---|---|---|---|
 | 1 | My tab main | tab 3 — `my/MyView.swift` | `my-view/home` — `MyMainView.kt` |
-| 2 | Settings hub · About | hub **none**; `about` (`Route.swift:100`) — `AboutView.swift` | `my-view/setting` — `SettingView.kt`; `my-view/about` — `AboutView.kt` |
+| 2 | Settings hub · About | hub **none**; `about` (`Route.swift:102`) — `AboutView.swift` | `my-view/setting` — `SettingView.kt`; `my-view/about` — `AboutView.kt` |
 | 3 | Widget · Language · Automatic | widget/language **none**; `automatic` (`:99`) — `MySiriView.swift` | `my-view/widget`, `/setting/language-setting`, `/automatic` |
 | 4 | User center main | `userCenter` (`:87`) | `user-center/main` — `UserCenterMainView.kt` |
 | 5 | Info · devices · social · passkey | `userCenterInfo` (`:88`), `userCenterLoginDevice` (`:89`), `userCenterSocialAccount` (`:90`), `userCenterPasskeyConfig` (`:91`) | `user-center/edit-info`, `/device`, `/social-account`, `/passkey` |
@@ -3249,7 +3267,7 @@ disagree. Token names follow `docs/design-system.md` §2. `pt` and `dp` are 1:1.
 | Content top inset | statusBarHeight + 100 | 80 + 32 + statusBars | **statusBarHeight + 100** (`:58`, `MyMainView.kt:44-46`) |
 | Content bottom · iPad column · overscroll | 100 · 400 centred (`:57`) · — | navBars + 80 · none · factor 2.5 | **nav inset + 80** (§1.3 tab-root) (`:59`, `Spacer.kt:19-31`) · **400 centred** · **2.5** (`BounceScrollView.kt:25-28`) |
 
-**Strings:** 我的 tab label — `Localizable.strings:10` `MY`, `values/strings.xml:5` `tab_my`. All block copy is remote CCKV (per block below).
+**Strings:** 我的 tab label — `Localizable.xcstrings` `main.my`, `values/strings.xml:5` `tab_my`. All block copy is remote CCKV (per block below).
 
 **States:** `loading` — **none**, no skeleton or spinner; remote images fade in 0.5 s (`MyUserCenterCard.swift:77`, `MyViewNavHeader.swift:33`) · `error` — **none** screen-level; image failures fall back to a glyph (`MyUserCenterCard.swift:69-73`, `MyViewUserCenterCard.kt:91-93`), a malformed config yields an empty card · `empty` — only the settings/link card renders; grid height 0 (`MyViewFunctionCard.swift:56`, `MyViewFunctionComponentView.kt:199`) · `debug build` — extra 调试入口 / Debug row (`MyViewSettingCard.swift:113-124`, `MyViewLinkCard.kt:153-171`).
 
@@ -3277,7 +3295,7 @@ All 8 module entries, in code order (`MyViewFunctionCard.swift:27-34`; Android's
 | 2 | `sport` | 运动 | `brand.sport` **#34C759** | `Route.sport` → `SportView()` (`:125`) | `sport/main` (`SportRoute.kt:10`) |
 | 3 | `score` | 成绩 | `brand.score` **#FF9500** | `Route.score` → `ScoreView()` (`:153`) | `ScoreRoutes.Home` (`ScoreRoute.kt:13`) |
 | 4 | `course_score` | 给分 | `brand.coursescore` **#283593** | `Route.courseScore` (`:111`) | `CourseScoreRoutes.Home` (`CourseScoreRoute.kt:16`) |
-| 5 | `pay` | E卡 | `brand.pay` **#BF360C** | **no route** — posts `Notification.ham_showPay` (`MyViewFunctionCard.swift:88-90`) | **no navigation** — `FloatViewManager.showFloatView { PaySheetView }` (`:136-153`) |
+| 5 | `pay` | E卡 | `brand.pay` **#BF360C** | **no route** — posts `Notification.ham_showPay` (`MyViewFunctionCard.swift:88-90`) | **no navigation** — `FloatViewManager.showFloatView { PaySheetView }` (`FloatViewManager.kt:22`; the API now returns a `FloatViewHandle` and takes a `tag`) |
 | 6 | `bus` | 校巴 | `brand.bus` **#A2845E** | `Route.bus` (`:217`) | `my-view/bus` (`MyViewRoute.kt:14`) |
 | 7 | `course` | 课程表 | `brand.course` **#1B5E20** | `Route.courseSetting` (`:163`) | `course/setting` (`CourseRoute.kt:14`) |
 | 8 | `schedule` | 日程 | `brand.schedule` **#01579B** | `Route.schedule` (`:223`) | `schedule/home` (`ScheduleRoute.kt:11`) |
@@ -3289,7 +3307,7 @@ All 8 module entries, in code order (`MyViewFunctionCard.swift:27-34`; Android's
 | Icon · gap · title · subtitle | SF Symbol unsized → 17 (`:109`) · default · 17 Bold, no line limit (`:111`) · 12 if non-empty (`:113-116`) | Material icon unsized → 24 (`:52`) · 8 (`:50`) · 16 Bold (`:54`) · 12 if not blank (`:55-57`) | **`icon.sm` 20 · `space.3` 8 · 17 / Bold 1 line · `caption` 12 1 line** |
 | Fill · foreground | brand @ 0.15 over `ham_bg_b1Color`; brand text (`:121-123`) | `color.copy(alpha=0.15f)`; brand text (`:47,54`) | **`tint.brand`** over `surface.primary`; tinted text matches its tint (§2.2 rule 2) |
 
-**Strings / states:** remote only — `myViewButtonConfig.buttonConfig.<key>["title-content"|"subtitle-content"][locale]` (`MyViewFunctionCardVM.swift:36-37`, `MyViewFunctionComponentView.kt:83-84`). **No bundled iOS labels**; Android's 8 bundled labels above never reach the UI (defect 3). `tile hidden` (config absent or `visible == false`; Android force-shows when `App.DEBUG`, `:222`) → invisible expanding spacer (`MyViewFunctionCard.swift:128`) · `empty` → grid height 0, Android requests `StaggeredGridCells.Fixed(0)` (`:199,203`) · `unknown type` → silently dropped (`:56`).
+**Strings / states:** remote only — `myViewButtonConfig.buttonConfig.<key>["title-content"|"subtitle-content"][locale]` (`MyViewFunctionCardVM.swift:36-37`, `MyViewFunctionComponentView.kt:83-84`). **No bundled iOS labels**; Android's 8 bundled labels above never reach the UI (defect 3). `tile hidden` (config absent or `visible == false`; Android force-shows when `App.DEBUG`, `:222`) → tile not built (`canShow: item.visible`) (`MyViewFunctionCard.swift:84,94`) · `empty` → grid height 0, Android requests `StaggeredGridCells.Fixed(0)` (`:199,203`) · `unknown type` → silently dropped (`:56`).
 
 **Divergence:** iOS emits each `row` group as a side-by-side `HStack` inside a horizontal scroller, so multi-row configs lay out horizontally (quirk, `MyViewFunctionCard.swift:48-62`); specify the staggered grid. Android's sport/score resolve to legacy Material #4CAF50 / #FF9800 (`Color.kt:78-82`). Android's `pay` opens a floating sheet, iOS posts a notification. Label drift: §1.2 says 课程评分 / 校车, Android ships 给分 / 校巴.
 
@@ -3305,9 +3323,9 @@ All 8 module entries, in code order (`MyViewFunctionCard.swift:27-34`; Android's
 | Collapsed title | remote title 17 Bold #555555, else 30⌀ avatar + nickname Bold (`MyViewNavHeader.swift:18-47`) | remote title only, 20 Bold, `text.primary` (`MyMainViewContainer.kt:120-131`) | remote title if set, else 30⌀ avatar + nickname |
 | Title position · transition · dead state | leading, h-pad 16, centred (`:116-127`) · `.easeInOut(0.3)` (`:113,120`) · `hasPull` (offset < -10) computed, never read (`:20,65,69`) | `CenterStart`, top pad statusBarHeight + 12 (`:123-128`) · `fade + slide{it/2}`, no duration (`:103,116-117`) · `animatedAlpha` computed, never read (`:60-63`) | **leading, h-pad 16, centred · 0.3 s easeInOut** · remove the dead state |
 
-**Strings:** title — `myViewConfig["title-content"][locale]` (`MyViewNavHeader.swift:18-19`, `MyMainViewContainer.kt:120-121`); Android has **no bundled default**, so it renders `""` (`CCKVContext.kt:95`). Fallback 未登录 (`MyViewNavHeader.swift:40`, `Localizable.strings:714`).
+**Strings:** title — `myViewConfig["title-content"][locale]` (`MyViewNavHeader.swift:18-19`, `MyMainViewContainer.kt:120-121`); Android has **no bundled default**, so it renders `""` (`core/configuration/…/CCKVContext.kt:115`). Fallback 未登录 (`MyViewNavHeader.swift:40`, `Localizable.xcstrings` `common.notLoggedIn`).
 
-**States:** `expanded` (≤ threshold) — image only, no bar, no scrim (`:77-79`, `MyMainViewContainer.kt:71-98`) · `collapsed` (> threshold) — bar and title fade/slide in; on iOS 26+ the header moves into `.toolbar(.title)` and the in-screen overlay is suppressed (`MyView.swift:82-87`, `MainTabView.swift:42-56`) · `remote title set` — avatar and nickname suppressed (`MyViewNavHeader.swift:18-22`).
+**States:** `expanded` (≤ threshold) — image only, no bar, no scrim (`:77-79`, `MyMainViewContainer.kt:71-98`) · `collapsed` (> threshold) — bar and title fade/slide in; on iOS 26+ the header moves into `.toolbar(.title)` and the in-screen overlay is suppressed (`MyView.swift:61-68`, `MainTabView.swift:42-56`) · `remote title set` — avatar and nickname suppressed (`MyViewNavHeader.swift:18-22`).
 
 **Divergence:** threshold 7 vs 50 — adopt 7; iOS 26+ uses a different placement mechanism, Android a flat 85 % fill; neither has an over-pull UI.
 
@@ -3333,9 +3351,9 @@ All 8 module entries, in code order (`MyViewFunctionCard.swift:27-34`; Android's
 | CAS plate · glyph | ⌀32 (16 glyph + 8 pad), `blue@0.15` (`:42-45`) | 48⌀ (36 glyph + 6 pad), `ham_blue@0.15` (`:131-140`) | **40 × 40 @ `accent` 0.10 · `icon.sm` 20** (§3.3) |
 | CAS title · subtitle · colour · chevron | 16 Bold (`callout`) (`:49-50`) · 12 (`:52`) · `text.primary` if bound else `.blue` (`:54`) · `chevron.right` 12 (`:56-57`) | 14 Bold (`:151`) · 11 (`caption2`) (`:156`) · `ham_text_primary` if bound else `ham_blue` (`:152,157`) · 24, unsized (`:162-166`) | **17 / Bold** (§2.4) · **`caption` 12** · **`text.primary` if bound, `accent` if not** · **`icon.xs` 12** |
 
-**Strings:** 点击登录 (`Localizable.strings:45` `TAP_TO_LOGIN`; `string.xml:4` `user_center_login_prompt`) · 不登录也可以使用校内功能哦 (**hardcoded** `MyUserCenterCard.swift:90`) · 登录信息门户 / 管理信息门户设置 (**hardcoded ternary — does not localise** `MyUserCenterCard.swift:48`; `string.xml:6-7`) · 使用校内服务的前提 (**hardcoded** `MyUserCenterCard.swift:51`; `string.xml:8`) · nickname and avatar URL are data (`login.pb.swift:182,184`) — no student-ID line exists.
+**Strings:** 点击登录 (`Localizable.xcstrings` `my.loginNow`; `string.xml:4` `user_center_login_prompt`) · 不登录也可以使用校内功能哦 (**hardcoded** `MyUserCenterCard.swift:90`) · 登录信息门户 / 管理信息门户设置 (**hardcoded ternary — does not localise** `MyUserCenterCard.swift:48`; `string.xml:6-7`) · 使用校内服务的前提 (**hardcoded** `MyUserCenterCard.swift:51`; `string.xml:8`) · nickname and avatar URL are data (`login.pb.swift:182,184`) — no student-ID line exists.
 
-**States:** `logged out` (token empty, `AccountContext.swift:90-93`) — placeholder avatar, 点击登录 + hint; tap posts `ham_loginShow` → app-level `LoginView` (`:23`, `ContentView.swift:38`) / `NotificationChannel.ShowLoginDialog` (`MyViewUserCenterCard.kt:64-69`) · `logged in` — remote avatar + nickname, row navigates to `Route.userCenter` (`:18`, `Route.swift:199`) / `user-center/main` (`:68`) · `CAS unbound` — 登录信息门户 in `accent`; `CAS bound` — 管理信息门户设置 in `text.primary` (`:48,54,58`) · `error` — avatar failure falls back to the placeholder glyph.
+**States:** `logged out` (token empty, `AccountContext.swift:90-93`) — placeholder avatar, 点击登录 + hint; tap posts `ham_loginShow` → app-level `LoginView` (`:23`, `ContentView.swift:38`) / `vm.showLoginDialog()` (`MyViewUserCenterCard.kt:66`; VM `:24`; `LoginDialogController.kt:23`) · `logged in` — remote avatar + nickname, row navigates to `Route.userCenter` (`:18`, `Route.swift:199`) / `user-center/main` (`:68`) · `CAS unbound` — 登录信息门户 in `accent`; `CAS bound` — 管理信息门户设置 in `text.primary` (`:48,54,58`) · `error` — avatar failure falls back to the placeholder glyph.
 
 **Divergence:** iOS gates the card on CCKV `ham_sync_useUserCenter`, **default false** (`CCKVContext.swift:34-35`); Android always shows it (`MyMainView.kt:49`) — show it unconditionally. Android's card emits no telemetry (`:64,124`).
 
@@ -3345,7 +3363,7 @@ All 8 module entries, in code order (`MyViewFunctionCard.swift:27-34`; Android's
 
 | Element | iOS | Android | normative |
 |---|---|---|---|
-| Guard · show/hide · card · title · gap · body | CCKV `ham_ui_showBoard`, default **false** (`MyView.swift:31`, `CCKVContext.swift:28-29`) · none · `HamCardView(padding 10, r16)` + inner pad 8 (`:13,21`) · 17 **Semibold** `text.primary`, spacing 0 (`:15-17`) · 0 · `Text(.init(...))` AttributedString markdown (`:19`) | same (`MyMainView.kt:34`, `CCKVContext.kt:42-43`) · `AnimatedVisibility` (`:51`) · default 16 / r16 (`MyViewBoardCard.kt:28`) · `bodyBold` 16 (`:30`) · 8 (`Card.kt:85`) · `MarkdownText` 0.3.1, `text.primary` (`:32-35`) | **flag-gated, default false · `AnimatedVisibility` · Card §3.1 — pad 16, r 16 · 17 / Bold** (§2.4), inner spacing 0 · **`space.3` 8** · markdown, `body` 17 / `text.primary` |
+| Guard · show/hide · card · title · gap · body | CCKV `ham_ui_showBoard`, default **false** (`MyView.swift:31`, `CCKVContext.swift:28-29`) · none · `HamCardView(padding 10, r16)` + inner pad 8 (`:13,21`) · 17 **Semibold** `text.primary`, spacing 0 (`:15-17`) · 0 · `Text(.init(...))` AttributedString markdown (`:19`) | same (`MyMainView.kt:34`, `core/configuration/…/CCKVContext.kt:48-49`) · `AnimatedVisibility` (`:51`) · default 16 / r16 (`MyViewBoardCard.kt:28`) · `bodyBold` 16 (`:30`) · 8 (`Card.kt:85`) · `MarkdownText` 0.3.1, `text.primary` (`:32-35`) | **flag-gated, default false · `AnimatedVisibility` · Card §3.1 — pad 16, r 16 · 17 / Bold** (§2.4), inner spacing 0 · **`space.3` 8** · markdown, `body` 17 / `text.primary` |
 
 **Strings / states:** remote — `boardData[locale]["title"|"content"]` (`MyViewBoardCard.swift:16,19`; `MyViewBoardCard.kt:30,33`). `hidden` (flag false) · `empty data` — blank title and blank body · no error state.
 
@@ -3369,7 +3387,7 @@ All 8 module entries, in code order (`MyViewFunctionCard.swift:27-34`; Android's
 
 | Element | iOS | Android | normative |
 |---|---|---|---|
-| Card · row spacing · divider | `HamCardView(10, r16)` + inner pad 8 (`MyViewSettingCard.swift:130,151`) · 15 (`:131`) · `Divider()` no insets (`CollectionView.swift:36`) | `PaddingValues(8.dp)` (`MyViewLinkCard.kt:84`) · row pad 8 (`:204-209`) · `HamDivider` v-pad 4 (`:109,135,154`) | **Card §3.1 — pad 16, r 16 · `space.3` 8 · 1px `surface.tertiary`, inset 0, v-pad 4** |
+| Card · row spacing · divider | `HamCardView(10, r16)` + inner pad 8 (`MyViewSettingCard.swift:129,150`) · 15 (`:130`) · `Divider()` no insets (`HamAsyncContentView.swift:36`) | `PaddingValues(8.dp)` (`MyViewLinkCard.kt:84`) · row pad 8 (`:204-209`) · `HamDivider` v-pad 4 (`:109,135,154`) | **Card §3.1 — pad 16, r 16 · `space.3` 8 · 1px `surface.tertiary`, inset 0, v-pad 4** |
 | Icon plate · glyph · title · subtitle · chevron | 40⌀ `blue@0.10`, pad 8 (`:186-193`) · 20 Semibold (`:185`) · 17 Semibold `text.primary` (`:196-198`) · 12 gray (`:199-201`) · `chevron.right` gray 17 pt (`:205-206`) | 40⌀ `ham_blue@0.10` (`:211-219`) · 25 guide/feedback/debug, **30 settings** (`:103,129,147,165`) · 16 Bold (`:223-228`) · 12 secondary (`:229-233`) · 24 `Color.Gray` (`:236`) | **40 × 40 @ `accent` 0.10 · `icon.sm` 20 for every row · 17 / Bold `text.primary` · `caption` 12 `text.secondary` · `icon.xs` 12 `text.secondary`** |
 
 Rows, in order (`MyViewSettingCard.swift:44-124`, `MyViewLinkCard.kt:78-171`):
@@ -3383,7 +3401,7 @@ Rows, in order (`MyViewSettingCard.swift:44-124`, `MyViewLinkCard.kt:78-171`):
 | 5 | 设置 | 自动化、小组件、关于等相关设置 | always (**Android only**) | `my-view/setting` (`MyViewLinkCard.kt:137-152`) |
 | 6 | Debug / 调试入口 | Debug settings (dev only) | `#if DEBUG` / `App.DEBUG` | debug screen (`:113-124`, `MyViewLinkCard.kt:153-171`) |
 
-**Strings:** 自动化 (`Localizable.strings:35`) · 添加Siri捷径 (`:36`) · 使用指南 (`:43`, `string.xml:45`) · 查看使用文档 (`:44`, `string.xml:46`) · 关于 (`:41`) · 版本信息与隐私协议 (`:42`) · 设置 (`string.xml:47`) · 自动化、小组件、关于等相关设置 (`string.xml:48`) · 调试入口 / `Debug settings` — **hardcoded, debug-only** (`MyViewSettingCard.swift:115-116`, `MyViewLinkCard.kt:159-160`) · hardcoded fallback URL (`MyViewLinkCard.kt:79`) · rows 2–3 titles are remote-overridable (`:72-73,92-93`).
+**Strings:** 自动化 (`Localizable.xcstrings` `common.automatic`) · 添加Siri捷径 (`common.addSiriShortcuts`) · 使用指南 (`common.userGuide`, `string.xml:45`) · 查看使用文档 (`my.readTheDocumentation`, `string.xml:46`) · 关于 (`my.about`) · 版本信息与隐私协议 (`common.versionInformationAndPrivacyPolicy`) · 设置 (`string.xml:47`) · 自动化、小组件、关于等相关设置 (`string.xml:48`) · 调试入口 / `Debug settings` — **hardcoded, debug-only** (`MyViewSettingCard.swift:115-116`, `MyViewLinkCard.kt:159-160`) · hardcoded fallback URL (`MyViewLinkCard.kt:79`) · rows 2–3 titles are remote-overridable (`:72-73,92-93`).
 
 **States:** `remote override` — rows 2–3 fall back to bundled defaults when a remote field is empty (`CCKVContext.swift:115-150`) · `link hidden` — with rows 2 and 3 hidden, only 设置 and Debug remain · dead flag `canShowCasSetting` read at `:40`, never used.
 
@@ -3407,9 +3425,9 @@ Rows, in order (`MyViewSettingCard.swift:44-124`, `MyViewLinkCard.kt:78-171`):
 
 | Element | iOS | Android | normative |
 |---|---|---|---|
-| Route · entry · content | `about` (`Route.swift:100`) · settings card row 4 (`MyViewSettingCard.swift:102-111`) · logo, version, changelog, actions (§4.8) | `my-view/about` (`MyViewRoute.kt:16`, `MyView.kt:41-43`) · settings hub row 4 (`SettingView.kt:87`) · logo, version, changelog, actions | both · settings hub row 4, once iOS ships the hub · logo · version · changelog · action rows |
+| Route · entry · content | `about` (`Route.swift:102`) · settings card row 4 (`MyViewSettingCard.swift:102-111`) · logo, version, changelog, actions (§4.8) | `my-view/about` (`MyViewRoute.kt:16`, `MyView.kt:41-43`) · settings hub row 4 (`SettingView.kt:87`) · logo, version, changelog, actions | both · settings hub row 4, once iOS ships the hub · logo · version · changelog · action rows |
 
-**Strings / states:** 关于 (`Localizable.strings:41`) · 版本信息与隐私协议 (`:42`) · actions per §4.8: 前往 App Store, 复制课程信息, 来 Github 找我, 分享日志 · no loading, empty, or error state on either platform. Defects: iOS `AboutPrivacyView` renders a markdown link as unstyled, untappable text (`design-system.md:968`); Android duplicates the markdown-link parser in `LoginView.kt` and `AboutView.kt` (`design-system.md:969`). Metrics were not measured in the audit range.
+**Strings / states:** 关于 (`Localizable.xcstrings` `my.about`) · 版本信息与隐私协议 (`common.versionInformationAndPrivacyPolicy`) · actions per §4.8: 前往 App Store, 复制课程信息, 来 Github 找我, 分享日志 · no loading, empty, or error state on either platform. Defects: iOS `AboutPrivacyView` renders a markdown link as unstyled, untappable text (`design-system.md:968`); Android duplicates the markdown-link parser in `LoginView.kt` and `AboutView.kt` (`design-system.md:969`). Metrics were not measured in the audit range.
 
 ### Platform-only surfaces — one platform ships each; the other adds it, unless the row says the gap is correct as-is.
 
@@ -3417,7 +3435,7 @@ Rows, in order (`MyViewSettingCard.swift:44-124`, `MyViewLinkCard.kt:78-171`):
 |---|---|---|---|---|---|
 | Share sheet | iOS | Export via the system activity view | **not measured in audit range 1-1185** — no file:line | unknown | Android: add a system share surface |
 | Full-text reader | iOS | Render a remote string as an in-app article (`design-system.md:867`) | **not measured in audit range** | remote | Android: webview / external browser only today — add the reader |
-| Automatic / Siri shortcuts | both routes | Expose shortcuts to platform automation | iOS 31-line `MySiriView`, caption + `SiriButtonView` `frame(height: 60)` for `.libraryQuickBookIntent` (`Route.swift:219-220`); Android 132-line `AutomaticSettingView.kt` | 自动化, 添加Siri捷径 (`Localizable.strings:35-36`) | One automation screen listing every shortcut; each platform renders its own system affordance |
+| Automatic / Siri shortcuts | both routes | Expose shortcuts to platform automation | iOS 31-line `MySiriView`, caption + `SiriButtonView` `frame(height: 60)` for `.libraryQuickBookIntent` (`Route.swift:219-220`); Android 132-line `AutomaticSettingView.kt` | 自动化, 添加Siri捷径 (`Localizable.xcstrings`: `common.automatic`, `common.addSiriShortcuts`) | One automation screen listing every shortcut; each platform renders its own system affordance |
 | Authorized apps | both routes | List and revoke third-party SSO grants | iOS `Route.swift:93`; Android `AuthorizedAppsView.kt` (revoke dialog `:117`, `android.R.string.cancel` `:144`) | not measured | Android: fix the blank page on error (`:84-112`) and the missing nav-bar spacer |
 | Passkey config | both routes | Register and manage passkeys | iOS `Route.swift:91` (5 hardcoded strings `:19,27,40,44,66`); Android `user-center/passkey` | not measured | iOS: localise the 5 literals |
 | Social binding | both routes | Link and unlink social accounts | iOS `Route.swift:90` (7 hardcoded strings `:139,174,206,211,248,280,285`); Android `user-center/social-account` | 微信, 自强 — hardcoded, keys exist (§0.4) | iOS: localise all 7 literals |
@@ -3464,7 +3482,7 @@ Android cells read `= iOS`: the Android build mirrors these values; the parallel
 **Values:**
 | Element | iOS | Android | normative | source |
 |---|---|---|---|---|
-| Colour | bg `ham_bg_b1Color` · field and card `ham_bg_b2Color` #FFFFFF / #0F1010 · placeholder `ham_text_t2Color`@0.15 · badge `Color.gray` (literal) · error toast red/white, success `.normal` (`secondarySystemBackground`) | = iOS | `surface.primary` / `surface.secondary` / `text.tertiary`; §3.8 toast | `:70-72,56,24-31,45`; `Color+Ham.swift:22,23`; `Toast.swift:31-34` |
+| Colour | bg `ham_bg_b1Color` · field and card `ham_bg_b2Color` #FFFFFF / #0F1010 · placeholder `ham_text_t2Color`@0.15 · badge `Color.gray` (literal) · error toast red/white, success `.normal` (`secondarySystemBackground`) | = iOS | `surface.primary` / `surface.secondary` / `text.tertiary`; §3.8 toast | `:70-72,56,24-31,45`; `Color+Ham.swift:22,23`; `ToastType+UI.swift:18,28,14,20,30` |
 | Type + geometry | root pad 16, `VStack(spacing:32)` · avatar 120×120 Circle scaledToFill, bg b1, fade 0.5 s, glyph 64 · badge 36×36, pad 8, `pencil` white · `TextField("昵称")` `.body` 17 pt, pad h8/v6, ≈34 pt, full width · nav title default `.automatic`, save `Text("保存")` 17 pt accent | = iOS | `space.5`, `space.6` · 120 pt circle + `icon.xl` · badge `icon.md` on `surface.tertiary` · §3.6 field: r8, `surface.secondary`, 1 px `surface.tertiary`, pad 8 · inline `title3` + borderless `text.link` | `:69,18,35-38,39-47,53-56,64,73,74-82` |
 | Limits + feedback | nickname ≤ 20 chars · avatar `jpegData(0.5)` else png, ≤ 4 MB, 2 MB gRPC chunks, name `UUID().uuidString + ".jpg"` · toast: top banner, HStack 5, icon 36, title 17 semibold, content 12 (2 lines), pad 16 · `.cancelled` swallowed | = iOS | same caps · §3.8 toast · surface cancellation | `UserCenterInfoViewModel.swift:34,64-66,81`; `ToastView.swift:85-117`; `ToastUtils.swift:89-91` |
 **Strings:** HARDCODED bare literals — 个人信息 (`:518` @ `:73`), 保存 (`:553` @ `:79`), 昵称 (`:697` @ `:53`) · localised — 用户名输入有误 (`:451`), 用户名不能大于20个字符 (`:452`), 图片大小不能大于4MB (`:453`), 保存成功 (`:423`), 遇到了错误 (`:384`).
@@ -3526,7 +3544,7 @@ Overlays: A GitHub WebContainer + Github登录 + 取消 [DEAD] :65-79
 **Values:**
 | Element | iOS | Android | normative | source |
 |---|---|---|---|---|
-| Colour | bg `ham_bg_b1Color` · button and rows `ham_bg_b2Color` #FFFFFF / #0F1010 · paragraph literal `.gray` · empty + date `ham_text_t2Color` · 删除 `.red` · success toast `.success` green/white | = iOS | `surface.primary` / `surface.secondary` / `text.secondary` / `text.danger`; §3.8 toast | `:65,31,36,21,46,30`; `Color+Ham.swift:22,23`; `Toast.swift:27-28` |
+| Colour | bg `ham_bg_b1Color` · button and rows `ham_bg_b2Color` #FFFFFF / #0F1010 · paragraph literal `.gray` · empty + date `ham_text_t2Color` · 删除 `.red` · success toast `.success` green/white | = iOS | `surface.primary` / `surface.secondary` / `text.secondary` / `text.danger`; §3.8 toast | `:65,31,36,21,46,30`; `Color+Ham.swift:22,23`; `ToastType+UI.swift:13-14,27-28` |
 | Type + geometry | content pad 16, VStack spacing unspecified · paragraph `.caption` 12 pt, ≈80 pt · add button full width, pad 16, r12, 17 pt accent, ≈49 pt · heading 17 pt `.bold` · 暂无数据 12 pt +8 · row pad 16, r12, name 14 pt `lineLimit(2)`, date `.caption` 12 pt, ≈65 pt (≈82 pt wrapped), no divider between rows · delete 17 pt `.red`, `.padding(.leading,4)` | = iOS | `space.5` + explicit `space.3` · `caption` in `text.secondary` · §3.4 tinted: 48 tall, r12, `tint.subtle`, `accent` text · `bodyBold` heading · §3.1 card body r16 · §3.9 empty `icon.xl` + `caption` · §3.4 destructive pill | `:62,18-33,40-47`; `UserCenterPasskeyConfigItemView.swift:19-37`; `Date+Format.swift:54-56` |
 | Feedback | `withAnimation` default on every mutation · success toast 已删除Passkey + refresh · errors `showGRPCError` · `ASAuthorizationError` logged and dropped with no user-visible message · register refreshes silently | = iOS | §3.8 toast; surface registration failure with a toast | `UserCenterPasskeyConfigViewModel.swift:40,55,65,73,82-85,87-92` |
 **Strings:** HARDCODED bare literals — Passkey 是一种安全、便捷的无密码身份验证技术… (`:501` @ `:19`), 添加Passkey (`:746` @ `:27`), 已注册的Passkey (`:641` @ `:40`), 暂无数据 (`:700` @ `:44`), Passkey管理 (`:502` @ `:66`) · localised — 删除 (`:577`), %@创建 (`:469`), 已删除Passkey (`:424`), 遇到了错误 (`:384`).
@@ -3590,7 +3608,7 @@ ALERT 取消授权 / 确定要取消对该应用的授权吗？ / 取消 / 取�
 | Root + camera | `ZStack` full screen, `Color.black` @1, `.ignoresSafeArea([.top,.bottom])` · `continuouslyScan = true`, `backButtonHidden = true`, `cutArea` unset → SDK default | = iOS | black canvas edge-to-edge; explicit scan-window rect + dim @0.5 if the SDK allows theming | `:119,151-153,23-29` |
 | Caption + lidar | caption `.body` 17 pt `Color.white`, `.offset(y:-250)` → 172 pt on 390×844, 83.5 pt on 375×667 · band 20 pt visible, inset 16 each side (358 pt) · base `Circle()` 200×200 scaled x1.79 / y0.2 (→40 pt ellipse) · `RadialGradient` `Color.blue` 0.9→0.7→0.5→0, `startRadius 0`, `endRadius 100` | = iOS | `body` white, positioned relative to the scan window · sweep band inset `space.5`, `accent` gradient, 20 pt tall | `:121-143` |
 | Animation + permission | fade-in `.linear(1 s)` ∥ sweep `.easeInOut(3 s, y −150→300 = 450 pt)`; fade-out `.linear(1 s)` after a 2 s sleep; idle 1 s; loop ≈4 s; task never cancelled on disappear · `AVCaptureDevice.requestAccess(for:.video)`; denied/restricted → toast, no dedicated screen, no 去设置 link · toast `.error` red bg / white fg, icon `Image(systemName:"")` (never renders), HStack 5, icon 36, title 17 semibold, content 12 (2 lines), pad 16, top `safeAreaTop()`, 3.3 s | = iOS | 4 s loop cancelled on disappear · permission-denied view with a settings deep link · §3.8 toast with a visible icon | `:156-179`; `ScanCodeViewModel.swift:37-57`; `ToastType+UI.swift:18,28`; `ToastView.swift:37,85-117`; `ToastUtils.swift:76,88` |
-**Strings:** 扫描登录二维码 (`Localizable.strings:665`) · 扫描配色分享二维码 (`:666`) · 相机权限未开启 (`:418`) · 请前往“设置”开启 (`:419`, full-width quotes U+201C/201D) · 扫码登录 (`:668`, entry row) · 是否允许Ham访问你的相机，以启用扫一扫功能 (`Ham/iOS/Info.plist:108`) · zero CJK literals in `ScanCodeView.swift`.
+**Strings:** 扫描登录二维码 (`Localizable.xcstrings` `usercenter.userCenterView.scanLoginQrCode`) · 扫描配色分享二维码 (`course.setting.scanColorShareQrCode`) · 相机权限未开启 (`usercenter.scan.cameraAccessIsDisabled`) · 请前往“设置”开启 (`usercenter.scan.pleaseEnableItInSettings`, full-width quotes U+201C/201D) · 扫码登录 (`usercenter.userCenterView.scanToLogin`, entry row) · 是否允许Ham访问你的相机，以启用扫一扫功能 (`Ham/iOS/Info.plist:108`) · zero CJK literals in `ScanCodeView.swift`.
 **States:** `authorized` — preview + caption + looping sweep · `denied/restricted` — toast then return; camera stays black, sweep keeps animating, no retry (`ScanCodeViewModel.swift:46-54`) · `scan success (ham://)` — deep link → `DeepLinkManager` → `.qrCodeLogin(ticket:)`; duplicate pushes suppressed by `router.path.last != route` (`MainDeeplinkView.swift:18`) · `scan success (other)` — `.ham_onReceiveQrCode` with `userInfo["id"]`/`["text"]`; only `CourseSettingThemeView.swift:91-99` listens · `result dropped` — payloads without a `ResultPoint` array discarded silently (`ScanCodeView.swift:66-68`).
 
 ### QR code login (二维码登录) — platforms: both — user-center entry
@@ -3614,7 +3632,7 @@ ALERT 取消授权 / 确定要取消对该应用的授权吗？ / 取消 / 取�
 **States:** `initial / fetch error` — content area entirely blank, no spinner, no retry (`QrCodeLoginView.swift:22,24`) · `requestConfirm` — icon + message + button · `none/success/fail` — icon + message, no button; `fail` is a dead end `:29` · `confirm in flight` — no visual change, re-tap is a silent no-op (`QrCodeLoginViewModel.swift:53-55`) · `success` — checkmark screen, 返回 pops to the still-live scanner `:55` · `error` — `.loadedWithError` written but unread by the view; `.cancelled` fails silently (`:66-68`; `ToastUtils.swift:96-98`) · `expired` — does not exist.
 
 ### SyncLoginView — platforms: iOS
-**Not a surface.** `Ham/iOS/ui/sync/SyncLoginView.swift` (47 lines) declares no `View` — no `struct SyncLoginView`, no `body`, no reference outside its own header (`:2`, still reading `SyncSettingView.swift`) and `project.pbxproj`. Its only content is two `WKNavigationDelegate` helpers: `LoginWithGithubWebviewDelegate` (`:14-33`, posts `.ham_receivedDeepLink` for `ham://login-server/open/github/redirect`) and `LoginWithWechatWebviewDelegate` (`:35-47`, hands `weixin://` to `UIApplication.shared.open`), live only via `LoginView.swift:226,276` and `SyncSocialAccountView.swift:83`.
+**Not a surface.** `Ham/iOS/ui/sync/SyncLoginView.swift` (47 lines) declares no `View` — no `struct SyncLoginView`, no `body`, no reference outside its own header (`:2`, still reading `SyncSettingView.swift`) and `project.pbxproj`. Its only content is two `WKNavigationDelegate` helpers: `LoginWithGithubWebviewDelegate` (`:14-33`, posts `.ham_receivedDeepLink` for `ham://login-server/open/github/redirect`) and `LoginWithWechatWebviewDelegate` (`:35-47`, hands `weixin://` to `UIApplication.shared.open`), live only via `LoginView.swift:226,276` and `SyncSocialAccountView.swift:88`.
 **Values / Strings / States:** none declared. Hardcoded URL fragments `ham`, `login-server`, `/open/github/redirect`, `weixin` (`:26-28,42`). **Normative:** treat the file as dead and misnamed; the cross-client login screen maps to `Ham/iOS/ui/common/login/LoginView.swift`.
 
 ### Shared tokens (iOS user-center / account stack)
@@ -3628,7 +3646,7 @@ ALERT 取消授权 / 确定要取消对该应用的授权吗？ / 取消 / 取�
 | `HamCardView` | `padding` param · r16 `clipShape` · bg `ham_bg_b2Color` · overlay `Image(systemName:"")` 200 @0.2 `Color.lightGray`, offset (0,0) | `CardView.swift:23,45,49,80-86,122-129` |
 | `Spacer().height(_:)` / `.width(_:)` | SwiftUIX `frame(height/width:)` shim | `Component/SwiftUIX/…/View.frame+.swift:172-179` |
 | `Date.ham_toyyyymmddhhmm` · `LoadStatus` | `yyyy-MM-dd HH:mm`, `locale .current`, `Date.ham_timezone` · `.unload / .loading / .loaded / .loadedWithError` | `Date+Format.swift:54-56,64-70`; `LoadState.swift:10-15` |
-| Toast | error red/white · success green/white · normal `secondarySystemBackground`; top banner pinned to window width, HStack 5, icon 36, title 17 semibold, content 12 (2 lines), pad 16 + `safeAreaTop()`, asymmetric opacity + `move(edge:.top)`, 3.3 s | `Toast.swift:23-45`; `ToastUtils.swift:65-100`; `ToastView.swift:37,85-133`; `ToastType+UI.swift:18,28` |
+| Toast | error red/white · success green/white · normal `secondarySystemBackground`; top banner pinned to window width, HStack 5, icon 36, title 17 semibold, content 12 (2 lines), pad 16 + `safeAreaTop()`, asymmetric opacity + `move(edge:.top)`, 3.3 s | `ToastType+UI.swift:8-32`; `ToastUtils.swift:65-100`; `ToastView.swift:37,85-133`; `ToastType+UI.swift:18,28` |
 | Type scale used | `.caption2` 11 · `.caption` 12 · `.body` 17 · `.title2` 22 · `.title` 28 | system defaults; call sites cited per screen |
 | `Device.tpnsToken` | `"IOS" + xgTokenString`, else `""` | `Device_iOS.swift:8-16` |
 
@@ -3651,7 +3669,7 @@ ALERT 取消授权 / 确定要取消对该应用的授权吗？ / 取消 / 取�
 - `nav card` — one `HamCardView(padding = 0)`: 个人信息 / 登录设备 / 社交账号 / Passkey管理 / 授权应用 / 扫码登录 — `:117-169`
 - `logout card` — full-width `HamCardView`, centred destructive label, `HamButton` → `vm.logout()`; **no confirmation dialog** — `:171-187`
 **Values:** | Element | iOS | Android | normative |
-|---|---|---|---|
+|---|---|---|---|---|
 | Chrome: bg / toolbar / title / back | — | `ham_bg_b1` #FFF9F9F9 / #000000; toolbar same @ **0.95f**, 42dp; 16sp Bold max 300dp maxLines 1; `ChevronLeft` `ham_blue` #007AFF, start 16dp | `surface.primary`; @ 0.95, 42 + status bar; `bodyBold` 17 `text.primary`; `accent`, 16 inset | `NavigationView.kt:70,90,116,130-164`; `colors.xml:65` |
 | Avatar / nickname | — | 108dp `CircleShape`, `Crop`, crossfade, unlabelled; placeholder bg #EDEEEF + #888888 glyph @ pad 12; spinner 20dp ⌀ / 2dp / #888888 · 24sp weight **forced Normal** | 108 circular, labelled; `surface.tertiary` bg, `text.tertiary` glyph; 20 / 2 `text.secondary` · `title` 28 Bold | `:91,94,96-114,254-259`; `Font.kt:18`; `HamLoadingProgressBar.kt:20-30` |
 | Card / row geometry / row text | — | r16 / `ham_bg_b2` #FFFFFFFF / pad 0 outer + v2 + h16 inner / **no elevation** · row pad v4, spacedBy 12, ~36dp · plate 28dp, r6, bg #888888, glyph #FFFFFF · label 16sp Normal #FF000000 · chevron 24dp #888888 · divider 1dp `ham_lightGray` #EDEEEF / #0F0E0F, inset 0 | `radius.card` / `surface.secondary` / h16 / none · `space.2` + `space.4` + 36 · `icon.sm` 20 on brand @ 0.1 plate, r6 · `bodyBold` 17 `text.primary` · `icon.xs` 12 `text.secondary` · `surface.tertiary`, pad v4 | `:117-120,197-216`; `Card.kt:51-55`; `Divider.kt:17-24` |
@@ -3674,8 +3692,8 @@ ALERT 取消授权 / 确定要取消对该应用的授权吗？ / 取消 / 取�
 - `nickname field` — the only editable field, `HamTextField` bound to `vm.nickname`, `singleLine = true`, no max-length filter, no counter, no clear button, no inline error — `:117-129`
 - `save` — nav-bar trailing text button, always enabled, no loading state; no bottom button, no keyboard-action save; back discards edits silently via `LocalNavController` — `:65-75`; `NavigationView.kt:76-81`
 **Values:** | Element | iOS | Android | normative |
-|---|---|---|---|
-| Save label / slot / validation | — | `headline` **14sp** Normal, `ham_blue` #007AFF / nav `Row`, end margin 8dp · blank → 用户名输入有误; > 20 → 用户名不能大于20个字符; gRPC → `showGrpcError`; success → 保存成功 with **no pop-back** | `body` 17 `accent` / trailing action, 16 inset, ≥44 target · same messages, then pop back | `:71-72`; `NavigationView.kt:171-182`; `UserCenterInfoViewModel.kt:130-156` |
+|---|---|---|---|---|
+| Save label / slot / validation | — | `headline` **14sp** Normal, `ham_blue` #007AFF / nav `Row`, end margin 8dp · blank → 用户名输入有误; > 20 → 用户名不能大于20个字符; gRPC → `showGrpcError`; success → 保存成功 with **no pop-back** | `body` 17 `accent` / trailing action, 16 inset, ≥44 target · same messages, then pop back | `:71-72`; `NavigationView.kt:171-182`; `UserCenterInfoViewModel.kt:123-150` |
 | Padding / dividers / avatar | — | v32, **h0** · 1dp #EDEEEF full-bleed above and below the field · 108dp circle + badge `CircleShape` bg #888888, 24dp glyph #FFFFFF, pad 6, `Alignment.BottomEnd` | v32, field block edge-to-edge · `surface.tertiary`, pad v4 · 108 circular, `surface.tertiary` badge, `icon.md` | `:79,87-89,105-112,118,128` |
 | Picker limits / upload | — | ≤ 4×1024×1024 bytes; `png\|PNG\|jpg\|JPG\|jpeg\|JPEG`; **silent abort** on breach; `ByteArray(2 * 1024 * 1024)` chunks under `ShowModalLoading` | reject with an inline error toast; chunked upload under a visible modal | `UserCenterInfoViewModel.kt:68,72,83-85,114` |
 | Field box, text, hint, caret, cap | — | bg `ham_bg_b2` #FFFFFFFF, pad 8dp, **no radius, no border** — the custom `boxModifier` drops both · text 16sp `ham_text_primary` · hint `ham_text_secondary` Gray #FF888888, `offset(y = -2dp)` · caret `SolidColor(ham_blue #007AFF)` · 20 enforced at save only | `surface.secondary`, `space.3`, r8, 1px `surface.tertiary` · `body` 17 `text.primary` · placeholder `text.tertiary` · caret `accent` · 20 with a counter and an input filter | `:122-124` vs `TextField.kt:42-49`; `TextField.kt:52,67,74-79`; `UserCenterInfoViewModel.kt:139` |
@@ -3698,7 +3716,7 @@ ALERT 取消授权 / 确定要取消对该应用的授权吗？ / 取消 / 取�
 - `device row` — icon inferred from the id (`IOS`→`PhoneIphone`, `AND`→`PhoneAndroid`, else `Smartphone`), name, id line, timestamp; **no IP address is displayed** — `:96-103`
 - `kick` — `下线` chip, immediate, **no confirmation**; a 20dp spinner replaces the chip while that row revokes; **no pull-to-refresh or retry** — `:106-122`; `UserCenterDeviceViewModel.kt:42-44,62-77`
 **Values:** | Element | iOS | Android | normative |
-|---|---|---|---|
+|---|---|---|---|---|
 | Card: pads / radius / bg / elevation | — | 16dp outer + 16dp inner (default) / 16dp / `ham_bg_b2` / **none** | `space.5` / `radius.card` / `surface.secondary` / none | `:68`; `Card.kt:48,51-55` |
 | Row: gap / padding / height | — | `spacedBy(8.dp)`, **no vertical padding**, ~56dp | `space.3` / v8 / 56 | `:69,95` |
 | Icon / name / id / time | — | 24dp, **no tint** (inherits content colour = black) / 16sp Bold #FF000000 / 12sp `ham_text_primary` / 12sp, `yyyy-MM-dd HH:mm` | `icon.sm` 20 `text.primary` / `bodyBold` 17 / `caption` 12 `text.secondary` / same | `:96-102`; `Font.kt:27-28`; `DateExt.kt:77-79` |
@@ -3723,10 +3741,10 @@ ALERT 取消授权 / 确定要取消对该应用的授权吗？ / 取消 / 取�
 - `bind transports` — QQ native SDK (no sheet); Wechat / Github / Ziqiang via `FloatViewManager.showFloatView { LoginSheetView }`; **Apple has no bind path**, it only toasts — `UserCenterSocialAccountViewModel.kt:87-235`; `:180-187`
 - `unbind` — **none**: `unbind()`'s body is entirely commented out and it is never called — `:237-249`
 **Values:** | Element | iOS | Android | normative |
-|---|---|---|---|
+|---|---|---|---|---|
 | Card / content / row / icon geometry | — | 16dp outer, pad 0 inner; content v2 + h16, rows 4 apart; row pad v4, spacedBy 12, ~34dp · icon box `size(26.dp)`, `RoundedCornerShape(6.dp)`, inner pad 2dp — **Ziqiang 4dp** | `space.5` / 0; h16, `space.2`; v4 + `space.4` + 34 · `icon.sm` 20 plate, r6, pad 2 | `:137,139-140,220,222,229-232,268-271,310-313,352-355,391-398` |
 | Plates: QQ / Wechat / Github / Apple | — | QQ bg `ham_qq` #FF12B7F5, Wechat bg `ham_wechat` #FF58BE6A, both glyph `ham_white` #FFFFFFFF · Github / Apple bg `ham_text_primary` (#000000 / #FFFFFF), glyph `ham_black`/`ham_white` by `isSystemInDarkTheme()`; Apple always `login_apple_dark` | brand-social plates, white glyph · invert with `text.primary`; the light asset in light mode | `:231,270,306-312,348-354`; `Color.kt:9,12` |
-| Ziqiang / name / 已登录 / chevron / spinner / divider / press | — | glyph hardcoded `Color(0xff01579b)`, bg `color.copy(alpha = 0.1f)` · name 16sp Normal `ham_text_primary` · 已登录 16sp overridden to `ham_text_secondary` Gray #FF888888 · unbound chevron 24dp (Material default) #FF888888 · row spinner 20dp ⌀ / 2dp / #FF888888 · divider 1dp #FFEDEEEF / #FF0F0E0F, inset 0 · press alpha 1→0.25f, bound rows still animate · **no `Loading` set** before `awaitWechatLogin()` | `ham_darkBlue` (`Color.kt:67`), brand @ 0.10 · `body` 17 `text.primary` · `body` 17 `text.secondary` · `icon.xs` 12 `text.secondary` · 20 / 2 · `surface.tertiary`, pad v4 · 0.25, bound rows must not animate · set `Loading` before every await | `:202,234,237-249,389,393,397`; `Button.kt:42-44,76`; `UserCenterSocialAccountViewModel.kt:133` vs `:91,170,209` |
+| Ziqiang / name / 已登录 / chevron / spinner / divider / press | — | glyph hardcoded `Color(0xff01579b)`, bg `color.copy(alpha = 0.1f)` · name 16sp Normal `ham_text_primary` · 已登录 16sp overridden to `ham_text_secondary` Gray #FF888888 · unbound chevron 24dp (Material default) #FF888888 · row spinner 20dp ⌀ / 2dp / #FF888888 · divider 1dp #FFEDEEEF / #FF0F0E0F, inset 0 · press alpha 1→0.25f, bound rows still animate · **no `Loading` set** before `awaitWechatLogin()` | `ham_darkBlue` (`Color.kt:67`), brand @ 0.10 · `body` 17 `text.primary` · `body` 17 `text.secondary` · `icon.xs` 12 `text.secondary` · 20 / 2 · `surface.tertiary`, pad v4 · 0.25, bound rows must not animate · set `Loading` before every await | `:202,234,237-249,389,393,397`; `Button.kt:42-44,76`; `UserCenterSocialAccountViewModel.kt:127` vs `:93,172,201` |
 **Strings:** 社交账号 `strings.xml:6`, QQ `:47`, 微信 `:48`, Github `:49`, Apple `:50`, 自强 `:51`, 已登录 `:22`, 设备暂不支持该方式登录 `:21`, 登录成功 `:23`. No hardcoded CJK.
 **States:** `page loading` centred spinner — `:130-134` · `loaded` — `:136-207` · `error`/`unload` blank page, no retry — `:209` · `empty` card with 0 rows (~4dp) — `:137-144` · `row bound` / `unbound idle` / `binding` / `bind failed` (chevron returns, toast only) — `:236-249` · `Apple` permanently unbindable — `:180-187` · **iOS gap:** iOS mirrors this surface and must additionally ship an unbind affordance with a confirmation.
 ### Passkey config (Passkey管理) — platforms: Android
@@ -3747,7 +3765,7 @@ ALERT 取消授权 / 确定要取消对该应用的授权吗？ / 取消 / 取�
 - `registered list` — header always shown, then `AnimatedContent`; rows are r12 surfaces separated by 8dp and surface contrast only, no divider, no elevation; row = name (12sp, 2 lines, ellipsis), created date, 删除 in `text.danger` with **no minimum tap target, no confirmation, no undo** — `:138-207`
 - `eligibility` — resolved off-screen, asynchronously, by `PasskeyProviderManager` (HMS → GMS → OPPO → default); 点击这里 uses the hardcoded `defaultProvider`, so HMS/OPPO devices take the Google path, and it is a **silent no-op below Android 34** — `PasskeyProvider.kt:36-82`; `GooglePasskeyProvider.kt:75-85`
 **Values:** | Element | iOS | Android | normative |
-|---|---|---|---|
+|---|---|---|---|---|
 | Root padding / gaps / intro / header / spinner / empty | — | h16 + top16, bottom 0; blocks 16, explanation 8, rows 8 · 12sp `ham_text_secondary` Gray #FF888888, lineHeight unspecified · header 16sp Bold `ham_text_primary` · list spinner 20dp ⌀ / 2dp / #FF888888, **left-aligned** · empty 暂无数据 12sp `ham_text_secondary` | `space.5` / `space.6` / `space.3` / `space.3` · `footnote` 13 `text.secondary` · `bodyBold` 17 `text.primary` · centred 20 / 2 · `footnote` 13 `text.secondary` | `:63-65,68-69,105,139-159,161`; `Font.kt:34-35` |
 | Warning / link spans | — | warning `ham_red` → `R.color.red` **#F44336**, both themes · link `ham_blue` #007AFF / #0A84FF + `TextDecoration.Underline`, `pushStringAnnotation("clickable","")` | `text.danger` #FF3B30 / #FF453A · `text.link` = `accent`, underlined, ≥44 tap target | `:83,87-90,95`; `Color.kt:63-64` |
 | Add: radius / bg / pad / height / icon | — | `RoundedCornerShape(12.dp)` / `ham_bg_b2` #FFFFFFFF / #FF0F1010 / v16, `Alignment.Center` / ~56dp · `Icons.Rounded.Add` 24dp `ham_blue` + 4dp + 16sp label, both `ham_blue` | `radius.6` / `surface.secondary` / v16 / 56 · `icon.md` 24 `accent` + `space.2` + `body` 17 `accent` | `:118-133` |
@@ -3768,11 +3786,11 @@ DEAD CODE, SyncLogoutView.kt (no route):
    │ pad v8/h16 · warning 12sp × ~2 lines · [◌ 25dp] ┌ 确定 ┐ r8, 40dp min, right-aligned, flush   :75-104
 ```
 **Blocks / anatomy:**
-- `auto-dismiss` — the stack is popped only by the `LoginStateChange` observer (current route contains `user-center`); the view performs no navigation — `LoginView.kt:105-113`
+- `auto-dismiss` — visibility is a `StateFlow` read in composition (`val showLogin by vm.showLogin.collectAsState()`, `LoginView.kt:84-85`, VM `LoginViewModel.kt:73`); the view performs no navigation
 - `row 1 (dead)` — 退出登录 with a trailing 25dp spinner and **no re-tap guard**, so `logout()` can fire repeatedly — `SyncLogoutView.kt:44-55`; `SyncLogoutViewModel.kt:35-45`
 - `deactivate panel (dead)` — warning paragraph plus a right-aligned 确定; spinner and button are mutually exclusive, so double-submit is prevented; no post-success transition — `:71-104`; `SyncLogoutViewModel.kt:47-65`
 **Values:** | Element | iOS | Android | normative |
-|---|---|---|---|
+|---|---|---|---|---|
 | Shipped label / container | — | 16sp `ham_red` #F44336 / r16 `ham_bg_b2`, pad v8 only, centred | `body` 17 `text.danger` / `radius.card`, `surface.secondary`, v8, ≥44 tap target | `:174,178-184` |
 | CardButton: shape / bg / elev / pad | — | `RectangleShape` (0dp) / `ham_bg_b2` #FFFFFFFF / #ff0f1010 / M3 `Card` default **1.dp** / h16 + v8 → 40dp | `radius.card`, 16 margin / `surface.secondary` / none / h16 + v8 | `:119-125` |
 | Row label colour / type | — | `androidx` `Color.Red` **#FFFF0000**, unthemed / no `style` → M3 `bodyLarge` 16sp, 24sp lineHeight, 0.5.sp tracking | `text.danger` / `body` 17 | `:46-50,62`; `HamTheme.kt:87-93` |
@@ -3799,7 +3817,7 @@ DEAD CODE, SyncLogoutView.kt (no route):
 - `app card` — 48dp r10 icon (+placeholder), name, then description, scope chips and grant date, each conditional on non-empty data so height varies; 取消授权 opens the dialog, it does not revoke — `:207-305`
 - `paging` — `PAGE_SIZE = 10`, VM guards concurrent runs; only 确定 in the dialog revokes, 取消 and scrim-tap clear `revokeTargetApp` — `AuthorizedAppsViewModel.kt:34,90`; `:116-148`
 **Values:** | Element | iOS | Android | normative |
-|---|---|---|---|
+|---|---|---|---|---|
 | Header / list / card / icon | — | 36dp, `ham_bg_b1` @ **0.75f** when non-empty else solid · top pad `statusBarHeight() + 16 + 36`, sides/bottom 16 · `spacedBy(16.dp)`, `userScrollEnabled = false` + `Modifier.bouncy` (resistance 0.2f) · card r16, bg #FFFFFFFF / #FF0F1010, outer 16 + inner Row 12 · icon 48dp r10 `Crop` crossfade, placeholder bg `ham_gray` @ 0.2f + `Icons.Rounded.Apps` 28dp #888888 | 42 (§1.3), `surface.primary` @ 0.95 · `space.5` + 42 + status bar · `space.5`, native overscroll · `radius.card`, `surface.secondary`, `space.5` · `icon.lg` 32 in a 48 plate, `radius.5`, `surface.tertiary` placeholder | `NavigationView.kt:197,288-290`; `:164-171,210,216-220,229,319-327`; `Card.kt:48,53`; `BounceScrollView2.kt:61-73` |
 | Name / description / scope chip | — | name 16sp Bold `ham_text_primary`, 1 line ellipsis, 2dp gap · description 12sp `ham_text_secondary` #888888, 2 lines ellipsis · chip **11.sp hardcoded** (`caption2` is the token), `ham_text_secondary`, bg `ham_gray` @ 0.15f, r4, pad h6 + v2, FlowRow 4dp both axes, 6dp above | `bodyBold` 17, `space.1` · `caption` 12 `text.secondary` · `caption2` 11 `text.secondary`, `tint.muted` (`text.secondary` @ 0.10), `radius.2`, h6 + v4 | `:236-269`; `Font.kt:52` |
 | Date / revoke / spinners / empty | — | hardcoded `SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())`, 12sp `ham_text_secondary` · 取消授权 **13.sp hardcoded** `ham_red` #F44336 · row spinner 14dp ⌀, 2dp stroke, `ham_red`, 6dp gap · page spinner 20dp ⌀ / 2dp / `ham_gray`, centred · empty 16sp `ham_text_secondary` | locale-aware `yyyy-MM-dd`, `caption` 12 · `footnote` 13 `text.danger` · 20 / 2, `space.2` · 20 / 2 `text.secondary` · `body` 17 | `:87,95-96,191,276-305` |
@@ -3843,9 +3861,9 @@ Entries into `user-center/main`: `MyViewUserCenterCard.kt:68`, `CourseCenterBrie
 - **`ham_red` resolves to Material #F44336, not `text.danger` #FF3B30 / #FF453A, with no dark variant** — `Color.kt:63-64` → `colors.xml:40`; the correct hex sits unused at `colors.xml:72`. Affects 退出登录, 下线, 删除, 取消授权 and the two Passkey warning spans. `ham_text_secondary` is likewise a hardcoded `Gray` with no night value — `Color.kt:28-29`.
 - **Every `else -> {}` branch renders a blank page** — device `UserCenterDeviceView.kt:82`, social `:209`, passkey list `:170`, authorized apps first-load error `:111`. Normative: an error state with a message and a retry, plus an empty state, on every list screen.
 - **Destructive actions fire without confirmation** — device 下线 `UserCenterDeviceView.kt:110-112`, Passkey 删除 `UserCenterPasskeyConfigView.kt:201-207`.
-- **Social accounts cannot be unbound** — `UserCenterSocialAccountViewModel.kt:237-249` is commented out and never called; `UserCenterSocialAccountView.kt:180-187` additionally renders Apple as bindable though it can never bind. **Wechat sets no `Loading` before its web login**, so only its row shows no spinner — `UserCenterSocialAccountViewModel.kt:133` vs `:91,170,209`.
+- **Social accounts cannot be unbound** — `UserCenterSocialAccountViewModel.kt:237-249` is commented out and never called; `UserCenterSocialAccountView.kt:180-187` additionally renders Apple as bindable though it can never bind. **Wechat sets no `Loading` before its web login**, so only its row shows no spinner — `UserCenterSocialAccountViewModel.kt:127` vs `:93,172,201`.
 - **Ziqiang's glyph colour is the literal `Color(0xff01579b)`** rather than the identical `ham_darkBlue` (`Color.kt:67`) — `UserCenterSocialAccountView.kt:389,393`; its icon padding is 4dp against 2dp for the other four (`:398`), so it renders smaller. **The nickname field's custom `boxModifier` drops the field's r8 radius and 1dp border** — `UserCenterInfoView.kt:122-124` vs `TextField.kt:42-49`.
-- **Save has no disabled or in-flight state and does not pop back after success** — `UserCenterInfoView.kt:65-75`; `UserCenterInfoViewModel.kt:130-156`. The 20-char cap is a save-time toast only (`:139`); the avatar picker aborts silently above 4 MB or outside `png|PNG|jpg|JPG|jpeg|JPEG` (`:68-74`).
+- **Save has no disabled or in-flight state and does not pop back after success** — `UserCenterInfoView.kt:65-75`; `UserCenterInfoViewModel.kt:123-150`. The 20-char cap is a save-time toast only (`:132-138`); the avatar picker aborts silently above 4 MB or outside `png|PNG|jpg|JPG|jpeg|JPEG` (`:68-74`).
 - **The main header is not tappable** — no shortcut from avatar or nickname into edit-info — `UserCenterMainView.kt:81-115`. **Non-token font sizes** — 11.sp scope chips and 13.sp 取消授权 (`AuthorizedAppsView.kt:262,303`); `SyncLogoutView.kt:46-50` declares no `style` and inherits M3 `bodyLarge` (16sp / 24sp / 0.5.sp tracking).
 - **Untranslatable user-facing text** — 取消 is the framework `android.R.string.cancel` (`AuthorizedAppsView.kt:144`); `网络异常，请稍后重试` is hardcoded at `ToastManager.kt:251,254`; dates use hardcoded patterns (`AuthorizedAppsView.kt:278`, `DateExt.kt:82`); app name, description, scopes and gRPC error bodies are server-supplied.
 - **The revoke dialog is not themed** — stock M3 `colorScheme` because `HamTheme` is not applied on the user-center path (`AuthorizedAppsView.kt:117-147`; `HamTheme.kt:55`); its scrim is black @ 0.32f against the spec's 0.5 and 取消 takes M3 `primary` instead of `accent`. Authorized apps also applies no bottom safe area, only 16dp content padding — `AuthorizedAppsView.kt:170` vs `Spacer.kt:19-31`.
@@ -3880,7 +3898,7 @@ the agreement; dismissing signs nothing in.
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Blocks / anatomy:** `root` overlay — iOS `.overlay(alignment:.center)` on `ContentView`, shown/hidden by `.ham_loginShow` / `.ham_loginDismiss` (`ContentView.swift:41`, `LoginView.swift:14,26,32`, `HamAccountManager.swift:56,61`) · Android `Box(fillMaxSize, Center)` above `HamNavHost`, driven by `NotificationChannel.ShowLoginDialog` (`MainView.kt:89`, `LoginView.kt:138-141`, `LoginViewModel.kt:227-232`) — **not** a NavHost destination on either (`LoginViewRoute.kt:9` unregistered) · `scrim` (`LoginView.swift:16-17`, `LoginView.kt:145-149`) · `card` (`LoginView.swift:174-187`, `LoginView.kt:151-156`, `Card.kt:48,53`) · `title + close` (`LoginView.swift:82-93`, `LoginView.kt:159-175`) · `subtitle` cloud-overridable via CCKV `.loginTip` (`LoginView.swift:73,94-96`, `CloudConfigKey.swift:24`) · `agreement row` (`:245-269`, `LoginView.kt:186-197,351-364`) · `Passkey button` (`LoginView.swift:334-352`, `LoginView.kt:202-228`) · `divider label + provider row` (`LoginView.swift:118-150`, `LoginView.kt:235-252`) · `loading` (`LoginView.swift:47-60`; Android uses global `LoadingModalView`, `MainView.kt:90-92`).
+**Blocks / anatomy:** `root` overlay — iOS `.overlay(alignment:.center)` on `ContentView`, shown/hidden by `.ham_loginShow` / `.ham_loginDismiss` (`ContentView.swift:41`, `LoginView.swift:14,26,32`, `HamAccountManager.swift:56,61`) · Android `Box(fillMaxSize, Center)` above `HamNavHost`, driven by `LoginDialogController` (`MainView.kt:95`, `LoginView.kt:84-85`, `LoginViewModel.kt:73`; host `LoginDialogHost.kt:13-14`) — **not** a NavHost destination on either (`LoginViewRoute.kt:9` unregistered) · `scrim` (`LoginView.swift:16-17`, `LoginView.kt:145-149`) · `card` (`LoginView.swift:174-187`, `LoginView.kt:151-156`, `Card.kt:48,53`) · `title + close` (`LoginView.swift:82-93`, `LoginView.kt:159-175`) · `subtitle` cloud-overridable via CCKV `.loginTip` (`LoginView.swift:73,94-96`, `CloudConfigKey.swift:24`) · `agreement row` (`:245-269`, `LoginView.kt:186-197,351-364`) · `Passkey button` (`LoginView.swift:334-352`, `LoginView.kt:202-228`) · `divider label + provider row` (`LoginView.swift:118-150`, `LoginView.kt:235-252`) · `loading` (`LoginView.swift:47-60`; Android uses global `LoadingModalView`, `MainView.kt:90-92`).
 
 | Element | iOS | Android | normative |
 |---|---|---|---|
@@ -3892,30 +3910,30 @@ the agreement; dismissing signs nothing in.
 | Close · checkbox | `xmark` ~17 `t1` · `square`/`checkmark.square.fill` **12** | `Close` **24** · `CheckBox`/`…OutlineBlank` 16 | **`icon.sm` 20 `text.primary` · 20 `accent` when on, 44 target** — `LoginView.swift:89-90,247,268`, `LoginView.kt:169-172,192-195` |
 | Agreement gap · link | `spacing:0` · `Color.blue`, underlined | 4 · `ham_blue`, markdown-regex | **`space.2` 4 · `text.link` underlined, tap target ≥44** — `LoginView.swift:255,258-259`, `LoginView.kt:186,359-362` |
 | Agreement→Passkey gap | 8 | 20 (4+12+4) | **`space.5` 16** — `LoginView.swift:107`, `LoginView.kt:183,201` |
-| Passkey · label · icon | **56** · **30** · gray@0.3 · icon 18 · label 18 Bold · gap 2 | ~40 · 10 · gray@0.3 · icon 24, y+1 · label 16 Normal · gap 4 | **48 (§3.4) · `radius.4` 8 · `tint.subtle` · `icon.sm` 20 · `bodyBold` 17 · `space.2` 4** — `LoginView.swift:341-347,433`, `LoginView.kt:208-228` |
+| Passkey · label · icon | **56** · **30** · gray@0.3 · icon 18 · label 18 Bold · gap 2 | ~40 · 10 · gray@0.3 · icon 24, y+1 · label 16 Normal · gap 4 | **48 (§3.4) · `radius.4` 8 · `tint.subtle` · `icon.sm` 20 · `bodyBold` 17 · `space.2` 4** — `LoginView.swift:304-314,409-410`, `LoginView.kt:208-228` |
 | Divider label · row gap | 12 gray, `padding(.top,16)` · row 16 | 12 #888, `spacedBy(8)` · row 16 | **`caption` 12 `text.secondary`, 16 above / 8 below · row `space.5` 16, centred** — `LoginView.swift:119-126`, `LoginView.kt:237-252` |
-| Loading · unsupported | in-card: scrim 0.75 + 64×64 r16 plate · `该版本暂不支持登录` 12 gray replaces the stack | global `LoadingModalView` · rows collapse, Passkey remains | **global modal spinner · the whole stack is replaced by one `caption` message** — `LoginView.swift:47-60,100-104`, `MainView.kt:90-92`, `LoginView.kt:245` |
+| Loading · unsupported | in-card: scrim 0.75 + 64×64 r16 plate · `该版本暂不支持登录` 12 gray replaces the stack | global `LoadingModalView` · rows collapse, Passkey remains | **global modal spinner · the whole stack is replaced by one `caption` message** — `LoginView.swift:47-60,100-104`, `MainView.kt:90-92,96-97` |
 
-**Strings:** `登录Ham` — iOS **HARDCODED** `LoginView.swift:83` (key exists `Localizable.strings:756`); Android `strings.xml:17` `common_login_title` · `登录Ham后，你可以使用校内功能以外的其他功能` — `Localizable.strings:757`, `strings.xml:18` · `我已阅读并同意` `I_AGREE` `Localizable.strings:82`; Android merges it into `common_privacy_agree_text` `strings.xml:19` with markdown `[用户隐私协议](url)` parsed at runtime (`LoginView.kt:341`) · `用户使用协议` / `用户隐私协议` TERM title — `Localizable.strings:83`, `LoginView.kt:351-353` · `或者选择以下登录方式` — iOS **HARDCODED** `LoginView.swift:119`; Android `strings.xml:21` · `通过Passkey登录` — iOS **HARDCODED** `LoginView.swift:343`; Android `strings.xml:20` · `该版本暂不支持登录` — iOS **HARDCODED** `LoginView.swift:101`; **absent on Android** · `请同意《用户使用协议》` toast iOS `LoginVM.swift:56` / `Localizable.strings:420`; Android `请阅读用户隐私协议` `LoginViewModel.kt:213` — **two different strings for the same gate**, norm to iOS.
+**Strings:** `登录Ham` — iOS **HARDCODED** `LoginView.swift:83` (key exists `Localizable.xcstrings` `common.loginToHam`); Android `strings.xml:17` `common_login_title` · `登录Ham后，你可以使用校内功能以外的其他功能` — `Localizable.xcstrings` `common.afterLoggingInYouCan`, `strings.xml:18` · `我已阅读并同意` — `Localizable.xcstrings` `common.iAgree`; Android merges it into `common_privacy_agree_text` `strings.xml:19` with markdown `[用户隐私协议](url)` parsed at runtime (`LoginView.kt:341`) · `用户使用协议` TERM title — `Localizable.xcstrings` `common.termOfService`; the catalog's `common.privacyPolicy` is 隐私协议, so the old 用户隐私协议 wording no longer ships, `LoginView.kt:351-353` · `或者选择以下登录方式` — iOS **HARDCODED** `LoginView.swift:119`; Android `strings.xml:21` · `通过Passkey登录` — iOS **HARDCODED** `LoginView.swift:343`; Android `strings.xml:20` · `该版本暂不支持登录` — iOS **HARDCODED** `LoginView.swift:101`; **absent on Android** · `请同意《用户使用协议》` toast iOS `LoginVM.swift:56` / `Localizable.xcstrings` `common.pleaseAgreeToTheUser`; Android `请阅读用户隐私协议` `LoginViewModel.kt:213` — **two different strings for the same gate**, norm to iOS.
 
-**States:** `hidden` (`LoginView.swift:14`, `LoginView.kt:88`) · `loading` — spinner covers the gRPC round-trip only (`LoginView.swift:415-419`, `LoginViewModel.kt:170-188`) · `agreement unticked` — every button stays enabled and toasts instead of disabling (`LoginVM.swift:54-56`, `LoginViewModel.kt:207-219`; **no disabled styling anywhere**) · `unsupported` — `validLoginType` empty (`LoginView.swift:100-104`, CCKV `ham_validLoginType` `CloudConfigKey.swift:8`) · `provider web flow` — iOS `SFSafariViewController` sheet (`LoginView.swift:156-169`), Android `LoginSheetView` float view (`LoginViewModel.kt:106-139`) · `error` — gRPC toasts; iOS swallows `GRPCStatus.cancelled` (`ToastUtils.swift:96-98`) and shows nothing for non-GRPC Passkey errors (`LoginVM.swift:263`); Android swallows non-`GrpcException` (`LoginViewModel.kt:149-159`) · `success` — card dismissed with no confirmation (`HamAccountManager.swift:61`, `LoginViewModel.kt:189`).
+**States:** `hidden` (`LoginView.swift:14`, `LoginView.kt:88`) · `loading` — spinner covers the gRPC round-trip only (`LoginView.swift:415-419`, `LoginViewModel.kt:170-188`) · `agreement unticked` — every button stays enabled and toasts instead of disabling (`LoginVM.swift:54-56`, `LoginViewModel.kt:207-219`; **no disabled styling anywhere**) · `unsupported` — `validLoginType` empty (`LoginView.swift:100-104`, CCKV `ham_validLoginType` `CloudConfigKey.swift:8`) · `provider web flow` — iOS `SFSafariViewController` sheet (`LoginView.swift:156-169`), Android `LoginSheetView` float view (`LoginViewModel.kt:106-139`) · `error` — gRPC toasts; iOS swallows `GRPCStatus.cancelled` (`ToastUtils.swift:96-98`) and shows nothing for non-GRPC Passkey errors (`LoginVM.swift:263`); Android swallows non-`GrpcException` (`LoginViewModel.kt:149-159`) · `success` — card dismissed with no confirmation (`HamAccountManager.swift:76-80`, `LoginViewModel.kt:189`).
 
-**Divergence:** scrim 0.30 vs 0.75 and card radius 24 vs 16 — adopt 0.30 / 24. Android has no `该版本暂不支持登录` state and no Apple chip; iOS has three dead sites (`LoginView.swift:222-242,271-311,40-44`) including a WeChat flag no view observes (`LoginVM.swift:145`).
+**Divergence:** scrim 0.30 vs 0.75 and card radius 24 vs 16 — adopt 0.30 / 24. Android has no `该版本暂不支持登录` state and no Apple chip; iOS has three dead sites (`LoginView.swift:222-242,271-311,40-44`) including a WeChat flag no view observes (`LoginVM.swift:151`).
 
 ### Provider buttons (第三方登录) — platforms: both
 
 **Purpose:** the cloud-gated third-party sign-in row beneath Passkey.
 
-**Blocks / anatomy:** `Passkey` full-width button above the row, **not** gated by `validLoginType` (`LoginView.swift:109`, `LoginView.kt:202`) · `provider row` — one icon-only circular chip per configured provider, centred, `HStack(spacing:16)` (`LoginView.swift:126-146`, `LoginView.kt:252`) · no chip carries a text label or an accessibility label on either platform.
+**Blocks / anatomy:** `Passkey` full-width button above the row, **not** gated by `validLoginType` (`LoginView.swift:109`, `LoginView.kt:181`) · `provider row` — one icon-only circular chip per configured provider, centred, `HStack(spacing:16)` (`LoginView.swift:126-146`, `LoginView.kt:252`) · no chip carries a text label or an accessibility label on either platform.
 
 | # | Provider | Icon | Label | Brand colour | Action |
 |---|---|---|---|---|---|
 | 1 | Passkey | `person.badge.key.fill` 18 / `login_passkey` 24 | `通过Passkey登录` 18 Bold | `text.primary` on gray@0.3 | `doSocialLogin(.passkey)` → `PasskeySignInHelper.signIn()` `LoginView.swift:336`, `LoginView.kt:203` |
-| 2 | QQ | `QQ-2` PNG 24 in 35 circle / `login_qq` 22 in 32 circle | none | **#12B7F5** | QQ SDK → avatar download → `doLogin(.qq)` `LoginView.swift:316`, `LoginView.kt:253-265` |
+| 2 | QQ | `QQ-2` PNG 24 in 35 circle / `login_qq` 22 in 32 circle | none | **#12B7F5** | QQ SDK → avatar download → `doLogin(.qq)` `LoginView.swift:281`, `LoginView.kt:253-265` |
 | 3 | Apple | `applelogo` 24, fg `.systemBackground` | none | circle `.primary` (inverted) | `authorizeByApple` → `doLogin(.apple)` `LoginView.swift:357` — **absent on Android** |
-| 4 | WeChat | `login/wechat`, pad 4 → 27 / pad 5 → 22 | none | **#58BE6A** | iOS sets `showWechatLoginView` with no view bound (**dead**, `LoginVM.swift:145`); Android opens the web sheet `LoginView.kt:291-303` |
-| 5 | GitHub | `login/github` ↔ `login/github_light`, 35, **no circle** / 32 bare | none | none — full-colour mark | OAuth web sheet → deep link → `doLogin(.github)` `LoginView.swift:375`, `LoginView.kt:277-283` |
-| 6 | Ziqiang (自强 / CAS) | `login/ziqiang` SVG, pad 4 → 27 / pad 5 → 22 | none | **#01579B @0.10** / `ham_lightGray` #EDEEEF | CAS web sheet → `doLogin(.ziqiang)` `LoginView.swift:403`, `LoginView.kt:310-322` |
+| 4 | WeChat | `login/wechat`, pad 4 → 27 / pad 5 → 22 | none | **#58BE6A** | iOS sets `showWechatLoginView` with no view bound (**dead**, `LoginVM.swift:151`); Android opens the web sheet `LoginView.kt:291-303` |
+| 5 | GitHub | `login/github` ↔ `login/github_light`, 35, **no circle** / 32 bare | none | none — full-colour mark | OAuth web sheet → deep link → `doLogin(.github)` `LoginView.swift:338`, `LoginView.kt:277-283` |
+| 6 | Ziqiang (自强 / CAS) | `login/ziqiang` SVG, pad 4 → 27 / pad 5 → 22 | none | **#01579B @0.10** / `ham_lightGray` #EDEEEF | CAS web sheet → `doLogin(.ziqiang)` `LoginView.swift:366`, `LoginView.kt:310-322` |
 
 | Element | iOS | Android | normative |
 |---|---|---|---|
@@ -3956,7 +3974,7 @@ the agreement; dismissing signs nothing in.
 | Action · logout | `重新登录` 17 accent · `退出登录` stock `.red` | `重新登录` / `登录` 16 `ham_blue` · `退出登录` 16 `ham_red` | **action `body` 17 `text.link`, label always `重新登录`; logout `body` 17 `text.danger`** — `CasSettingView.swift:46-50,86`, `CasSettingMainView.kt:65-74,78-84` |
 | Unbound · card 2 | 未登录 12; card 2 bound only (`enable`, `:70`) | status slot **omitted**, label 登录; card 2 always | **未登录 12 `text.primary`, label `重新登录`; card 2 bound only** — `CasSettingView.swift:54-56,70`, `CasSettingMainView.kt:43,77` |
 
-**Strings:** `信息门户设置` nav title — Android `cas/strings.xml:4`, **iOS missing** · `登录状态` — iOS **HARDCODED** `CasSettingView.swift:23` (`Localizable.strings:762`), Android `cas/strings.xml:5` · `信息门户的登录状态` — HARDCODED `:25` (`:557`), Android `:6` · `已登录` HARDCODED `:36` (`:643`) / `:7` · `登录状态失效` HARDCODED `:39` (`:763`) / `:8` · `未登录` HARDCODED `:55` (`:714`) — **no Android equivalent, Android omits the slot** · `重新登录` HARDCODED twice `:49,:62` (`:370` and duplicate `:408`) / `:9` · `其它设置` HARDCODED `:73` (`:570`) / `:11` · `退出登录` localized `:85` (`Localizable.strings:227`) / `:12` · `登录成功` toast localized `:119` (`Localizable.strings:196`, duplicate `:421`) — **Android has no success toast** · iOS entry-point copy 管理信息门户设置 / 登录信息门户 / 使用校内服务的前提 HARDCODED `MyUserCenterCard.swift:48,52`.
+**Strings:** `信息门户设置` nav title — Android `cas/strings.xml:4`, **iOS missing** · `登录状态` — iOS **HARDCODED** `CasSettingView.swift:23` (`Localizable.xcstrings` `common.loginStatus`), Android `cas/strings.xml:5` · `信息门户的登录状态` — HARDCODED `:25` (`common.infoPortalLoginStatus`), Android `:6` · `已登录` HARDCODED `:36` (`common.loggedIn`) / `:7` · `登录状态失效` HARDCODED `:39` (`common.loginInvalid`) / `:8` · `未登录` HARDCODED `:55` (`common.notLoggedIn`) — **no Android equivalent, Android omits the slot** · `重新登录` HARDCODED twice `:49,:62` (`common.logInAgain` — the `:408` duplicate is gone; one key now) / `:9` · `其它设置` HARDCODED `:73` (`common.otherSettings2`) / `:11` · `退出登录` localized `:85` (`Localizable.xcstrings` `common.logOut`) / `:12` · `登录成功` toast localized `:119` (`Localizable.xcstrings` `common.loggedInSuccessfully` — the `:421` duplicate is gone) — **Android has no success toast** · iOS entry-point copy 管理信息门户设置 / 登录信息门户 / 使用校内服务的前提 HARDCODED `MyUserCenterCard.swift:48,52`.
 
 **States:** `validating` — spinner, action still tappable (`CasSettingView.swift:32-33`, `CasSettingMainView.kt:50`) · `bound + valid` → 已登录 · `bound + expired` → 登录状态失效 in `text.danger`, no auto-open of the sheet · `unbound` → 未登录, card 2 hidden · `validation threw` — iOS catches only `ResponseError`, so any other throw pins the spinner **forever** (`CasSettingView.swift:137-143`); Android treats every exception as invalid (`CasContext.kt:49-55`) · `login success` — `.ham_casLoginSuccess` flips to 已登录 + toast 登录成功 (`:114-120`); Android refreshes then hides (`CasSettingView.kt:81-84`) · `logout` — one tap wipes the credential with **no confirmation** on either (`:79-83`, `CasSettingMainView.kt:78-84`).
 
@@ -3966,7 +3984,7 @@ the agreement; dismissing signs nothing in.
 
 **Purpose:** the actual portal authentication surface — a full-bleed remote CAS page whose cookies and typed credentials are harvested for the bus, library, sport, pay and course modules.
 
-**Blocks / anatomy:** `A/B branch` — remote CCKV flag `rnConfig["enable"]["RNCasMobileLogin"]` selects `RNCasLoginView` (RN module `RNCasMobileLogin`) else the `WKWebView` / `WebViewCompose` path; missing config defaults to WebKit (`CasMobileLoginView.swift:16-27`, `CasMobileLoginView.kt:43-58`) · `nav bar` — owned by the presenter (`CasSettingView.swift:99-111`) / in-view with title 信息门户 + 关闭 (`CasMobileLoginView.kt:48-55`, `CasSettingView.kt:60-79`) · `full-bleed web content`, `.ignoresSafeArea(.bottom)` (`CasMobileLoginView.swift:30`) · `injected JS` — binds `#mobileUsername`, `#mobilePassword`, `#load`, removes `.social-aut-login`, sets the 学号 placeholder and the 13-character rule (`CasJsInjector.swift:14,16-30`, `CasMobileLoginWebView.kt:57-83`) · `result capture` — cookie sweep then `successCallback` / `NotificationChannel.ReactNativeCasMobileRequestSuccess` (`CasMobileLoginWebView.swift:97-129`, `CasMobileLoginViewModel.kt:47-61`).
+**Blocks / anatomy:** `A/B branch` — remote CCKV flag `rnConfig["enable"]["RNCasMobileLogin"]` selects `RNCasLoginView` (RN module `RNCasMobileLogin`) else the `WKWebView` / `WebViewCompose` path; missing config defaults to WebKit (`CasMobileLoginView.swift:16-27`, `CasMobileLoginView.kt:43-58`) · `nav bar` — owned by the presenter (`CasSettingView.swift:99-111`) / in-view with title 信息门户 + 关闭 (`CasMobileLoginView.kt:48-55`, `CasSettingView.kt:60-79`) · `full-bleed web content`, `.ignoresSafeArea(.bottom)` (`CasMobileLoginView.swift:30`) · `injected JS` — binds `#mobileUsername`, `#mobilePassword`, `#load`, removes `.social-aut-login`, sets the 学号 placeholder and the 13-character rule (`CasJsInjector.swift:14,16-30`, `CasMobileLoginWebView.kt:57-83`) · `result capture` — cookie sweep then `successCallback` / `RnCasMobileLoginDispatcher.results` (collected `CasMobileLoginViewModel.kt:39-41`; dispatcher `RnCasMobileLogin.kt:26-28`) (`CasMobileLoginWebView.swift:97-129`, `CasMobileLoginViewModel.kt:37-48`).
 
 | Element | iOS | Android | normative |
 |---|---|---|---|
@@ -3977,7 +3995,7 @@ the agreement; dismissing signs nothing in.
 | Credentials | `username`/`password` empty unless the `#load` tap fires; plaintext password persisted and pushed to the watch | posted to the bridge on `change`; plaintext persisted | **stop persisting the plaintext password** — `CasMobileLoginView.swift:37,39`, `CasJsInjector.swift:61`, `CasMobileLoginViewModel.kt:39-45` |
 | Success · failure · progress | cookie → `fastLoginCookie` → notify → `ZSGXService.login/updateUserInfo` → refresh → dismiss · `ToastUtils.showError`, **sheet stays open**, non-`ResponseError` escapes silently · **no indicator** | `saveLoginResult` → LSKV + `addAccount(CAS)` + `initUserInfo` → refresh → hide · no native handling · **no indicator** | **validate then dismiss; refresh state on every dismissal, not only on success; toast + inline retry; add a progress bar (§5.4)** — `CasMobileLoginView.swift:33-52`, `CasSettingView.kt:81-84`, `WebViewCompose.kt:80-85` |
 
-**Strings:** iOS renders **zero** strings — all copy comes from the remote page; the intro entry point hardcodes 从信息门户验证 and 将进入武汉大学信息门户网页验证你的身份 (`IntroView.swift:159-160`). Android: `信息门户` `cas/strings.xml:3` · `关闭` `:13` · `学号` `:25` and `请输入正确的学号` `:26` (both injected into the page). iOS additionally hardcodes `解析文档失败` and `请重新登录信息门户` as `ResponseError.message` (`CasRequestHelper.swift:83,109`).
+**Strings:** iOS renders **zero** strings — all copy comes from the remote page; the intro entry point hardcodes 从信息门户验证 and 将进入武汉大学信息门户网页验证你的身份 (`IntroView.swift:144-145`). Android: `信息门户` `cas/strings.xml:3` · `关闭` `:13` · `学号` `:25` and `请输入正确的学号` `:26` (both injected into the page). iOS additionally hardcodes `解析文档失败` and `请重新登录信息门户` as `ResponseError.message` (`CasRequestHelper.swift:83,109`).
 
 **States:** `loading` — no native indicator on either · `credentials entered` — mirrored over the bridge · `login tapped` → `#load` hook validates · `wrong password / captcha / locked` — rendered by the CAS page; **no native copy or retry** · `cookies obtained` → result emitted, final redirect cancelled (`CasMobileLoginWebView.swift:118-125`) · `service chain failed` → toast, sheet stays · `user dismisses` → no notification, state not refreshed.
 
@@ -4063,7 +4081,7 @@ Two stacked gates: the server flag `can_auto_authorize` and the client preferenc
 | Variant B | `checkmark.circle.fill` 48, stock `.green` · message 17 `t1`, h-pad 32, gap 12 | `CheckCircle` 48, `ham_green` #4CAF50 · message 16, h-pad 32, gap 12 | **48 `feedback.success` #34C759 / #30D158 · `body` 17 centred, h-pad 32, gap 12** — `swift:240-250`, `kt:322-337` |
 | Spinner · redirect · retry | stock `ProgressView` · allow-list `http`/`https`/`ham` · ≤1 retry on `PERMISSION_DENIED` + `13008` | `CircularProgressIndicator` 40/4 `ham_blue` · same allow-list · ≤1, same predicate | **centred spinner `accent` · allow-list `http`/`https`/`ham` else toast 无法打开回调链接 · ≤1 retry** — `swift:96`, `VM:159-164,291-307`, `kt:187-192,317-322,364-384` |
 
-**Strings:** `授权请求` `sso_auth_title` — `Localizable.strings:903` / `auth/strings.xml:25` · `授权` `:904` / `:26` · `取消` `:905` / `:27` · `下次自动授权` `:906` / `:28` · `已授权` `:907` / `:29` · `必选` `:908` / `:30` · `你已授权过该应用，是否继续授权？` `:909` / `:31` · `请求以下权限：` `:914` / `:36` · `网络错误，请稍后重试` `:912` / `:34` · `无法打开回调链接` `:913` / `:35`. **Unused on both:** `无法识别该应用` (`:910` / `:32`), `请先登录后再进行授权` (`:911` / `:33`), `请至少选择一项权限` (`:915` / `:37`).
+**Strings:** iOS `Localizable.xcstrings`, Android `auth/strings.xml` — `授权请求` `sso_auth_title` (`sso.sSOAuthorizationSheet.authorizationRequest` / `:25`) · `授权` (`sso.sSOAuthorizationSheet.authorize` / `:26`) · `取消` (`common.cancel` / `:27`) · `下次自动授权` (`sso.sSOAuthorizationSheet.autoAuthorizeNextTime` / `:28`) · `已授权` (`common.granted` / `:29`) · `必选` (`common.required` / `:30`) · `你已授权过该应用，是否继续授权？` (`sso.sSOAuthorizationSheet.youHavePreviouslyAuthorizedThis` / `:31`) · `请求以下权限：` (`sso.sSOAuthorizationSheet.requestingTheFollowingPermissions` / `:36`) · `网络错误，请稍后重试` (`sso.sSOAuthorizationViewModel.networkErrorPleaseTryAgain` / `:34`) · `无法打开回调链接` (`sso.sSOAuthorizationViewModel.unableToOpenRedirectUrl` / `:35`). **Deleted on iOS, still shipped but unused on Android:** `无法识别该应用` (was `:910` / `auth/strings.xml:32`), `请先登录后再进行授权` (`:911` / `:33`), `请至少选择一项权限` (`:915` / `:37`) — the String Catalog migration dropped all three from iOS.
 
 **States:** `idle` / `redirecting` — nothing rendered (`swift:56-57`, `kt:177-179`) · `loading` / `authorizing` — spinner only, and **the fetch, silent-authorize and mint phases are visually identical** (`swift:35-36`, `kt:166-168`) · `waitingForLogin` — **Android only**; shows the global login dialog and resumes (`kt:140-146`) · `not scrolled to bottom` — 授权 disabled with no explanatory hint · `content shorter than viewport` — Android enables immediately; iOS's latch never resets (`swift:121,178`, `kt:210`) · `gRPC error` — toast, sheet dismisses, no retry (`VM:279-284`, `kt:207-212`) · `missing nonce` — toast, sheet stays (`VM:123-127`, `kt:266-270`) · `bad redirect scheme` — toast 无法打开回调链接, dismiss · `success` — `updateLastAuthorizeTime`, open `redirect_uri`, dismiss; **Android's 取消 only hides the sheet and never notifies the third party** (`kt:150-152`).
 
@@ -4111,17 +4129,17 @@ Two stacked gates: the server flag `can_auto_authorize` and the client preferenc
 > The measured values live in the canonical section above; this one is kept only for its
 > Android result-dispatch detail, which the canonical section does not have. Merge and delete.
 
-**Blocks / anatomy:** `camera preview` — full-bleed · `scan frame` — centred reticle · `result dispatch` — Android forwards every `ham://` scan as `OnReceivedDeepLink` (`QrCodeScanToLoginHandler.kt:16-25`), then `DeepLinkHandler` maps host → route (`DeepLinkHandler.kt:20-24,55-59`); routes `qrcode/scan` (`QrCodeViewRoute.kt:10-13`) and `scanCode` (iOS, `Route.swift:96`).
+**Blocks / anatomy:** `camera preview` — full-bleed · `scan frame` — centred reticle · `result dispatch` — Android forwards every login scan as a deeplink — `QrCodeScanToLoginHandler.kt:29-31` (`isLoginDeeplink`: `ham://` **plus** `https://ham.nowcent.cn/sso-authorize`), dispatched at `:45` and mapped host → route in `MainView`'s `DeeplinkEffect` (`MainView.kt:120-171`); routes `qrcode/scan` (`QrCodeViewRoute.kt:10-13`) and `scanCode` (iOS, `Route.swift:98`).
 
 ### Cross-screen defects (auth stack)
 
-- **Kill the three dead iOS login sites** — `githubLoginWebView()` (`LoginView.swift:222-242`), `wechatLoginWebView()` (`:271-311`; unreachable — `LoginVM.swift:145` sets a flag no view observes), `cancelLogin()` (`:40-44`); route WeChat through the same web sheet as GitHub/Ziqiang.
-- **Gate Passkey on `validLoginType`** like every other provider (`LoginView.swift:109`, `LoginView.kt:202`) · **add the missing disabled/error affordances**: the agreement toasts instead of disabling (`LoginVM.swift:54-56`, `LoginViewModel.kt:207-219`), `该版本暂不支持登录` has no Android equivalent (`LoginView.kt:245`), the QR confirm has no in-flight state (`QRCodeLoginViewModel.kt:64`) and QR expiry no UI (`qr_login.proto:31-32`).
-- **Give iOS CAS settings a nav title and localise its 8 hardcoded strings** (`CasSettingView.swift:23,25,36,39,49,55,62,73`; keys already at `Localizable.strings:643,557,762,763,370,714,408,570`); de-duplicate `重新登录` `:370`/`:408` and `登录成功` `:196`/`:421`.
+- **Kill the three dead iOS login sites** — `githubLoginWebView()` (`LoginView.swift:222-242`), `wechatLoginWebView()` (`:271-311`; unreachable — `LoginVM.swift:151` sets a flag no view observes), `cancelLogin()` (`:40-44`); route WeChat through the same web sheet as GitHub/Ziqiang.
+- **Gate Passkey on `validLoginType`** like every other provider (`LoginView.swift:109`, `LoginView.kt:181`) · **add the missing disabled/error affordances**: the agreement toasts instead of disabling (`LoginVM.swift:54-56`, `LoginViewModel.kt:207-219`), `该版本暂不支持登录` has no Android equivalent — Android's only `validLoginType` gate renders `common_login_other_methods` (`LoginView.kt:223-229`), the QR confirm has no in-flight state (`QRCodeLoginViewModel.kt:64`) and QR expiry no UI (`qr_login.proto:31-32`).
+- **Give iOS CAS settings a nav title and localise its 8 hardcoded strings** (`CasSettingView.swift:23,25,36,39,49,55,62,73`; keys already in `Localizable.xcstrings`: `common.loggedIn`, `common.infoPortalLoginStatus`, `common.loginStatus`, `common.loginInvalid`, `common.logInAgain`, `common.notLoggedIn`, `common.otherSettings2`). ~~de-duplicate `重新登录` `:370`/`:408` and `登录成功` `:196`/`:421`~~ — **done**: the migration collapsed both pairs into one key each.
 - **Stop persisting the CAS plaintext password** and stop delivering empty credentials when a session is established without a `#load` tap (`CasMobileLoginView.swift:37,39`, `CasJsInjector.swift:61`, `CasMobileLoginWebView.swift:121-122`).
 - **iOS `CasSettingView` catches only `ResponseError`** — any other throw pins the spinner forever (`:137-143`); Android should distinguish a network error from an expired session instead of collapsing both into 登录状态失效 (`CasContext.kt:49-55`) · **unify the two reds** #FF0000 / #F44336 into `text.danger` #FF3B30 / #FF453A (`CasSettingView.swift:86`, `CasSettingMainView.kt:80`).
 - **Add a drag handle to every sheet** (§3.7) — `HamSheet` ships only an invisible 32 dp grab zone (`Sheet.kt:63,130-144`); iOS declares no detents at all (`MainSheetView.swift:22`, `CasSettingView.swift:98`).
-- **iOS SSO: replace the one-way scroll latch with a live scroll computation** and give the disabled 授权 a visible reason (`SSOAuthorizationSheet.swift:121,176-179`, `kt:207-212`); localise the ASCII scope parens (`swift:369-371`, `kt:451-452`); adopt Android's `WaitingForLogin` resume and surface the unused `请先登录后再进行授权` (`Localizable.strings:911`, `auth/strings.xml:33`).
+- **iOS SSO: replace the one-way scroll latch with a live scroll computation** and give the disabled 授权 a visible reason (`SSOAuthorizationSheet.swift:121,176-179`, `kt:207-212`); localise the ASCII scope parens (`swift:369-371`, `kt:451-452`); adopt Android's `WaitingForLogin` resume. ~~surface the unused `请先登录后再进行授权` (`Localizable.strings:911`, `auth/strings.xml:33`)~~ — **moot on iOS**: the key was deleted with the `.strings` file; it survives only in Android's `auth/strings.xml:33`.
 - **Ship `removePreference`** — a per-app revoke in authorized-apps; dead on both (`SSOAuthPreferenceManager.swift:61-65`, `kt:40-42`) — and make Android's 取消 notify the third party of denial (`SSOAuthorizationSheet.kt:150-152`).
 - **Add the missing Apple chip on Android** (`LoginType.Apple` exists, `HamUserInfoUnbindRequest.kt:21-28`) · **audit 扫一扫** — no measured values exist for either platform in this range.
 
@@ -4143,7 +4161,7 @@ Two stacked gates: the server flag `can_auto_authorize` and the client preferenc
 |---|---|---|---|
 | Icon / title / hint | `xmark.circle.fill` 64, white on `.red` — `ErrorView.swift:31-33`; `.title` — `:35`; `.caption` 12 — `:39` | `Icons.Rounded.Close` 64, pad 8, white on `ham_red` — `ErrorView.kt:77-83`; 24sp Bold — `:85`; `body` 16sp — `:86` | `icon.xl` 64 white on `feedback.error`; `title` 28 / Bold; `caption` 12 / `text.secondary` |
 | Spacing / action / container | stack 4 — `:30`; icon→action 32 — `:42`; implicit height, maxWidth 350, blue @ 0.15, r12 — `:49-53`; no padding, `ham_bg_b1Color`, no animation — `:57-58` | stack 8.dp — `:74`; gap 16.dp — `:88`; 48.dp tall, fillMaxWidth + 4.dp inset, `ham_blue` @ 0.15f, r12 — `:92-97`; 16.dp padding, inherits bg, `slideInVertically{it/2}` + fade after 200 ms — `:71,56-67` | `space.3` 8 stack; `space.7` 32; action 48 tall, `radius.6` 12, `tint.subtle`, `bodyBold` / `accent`, to the 16 screen margin, cap 350; `space.5` 16, `surface.primary`, slide-in + fade 200 ms |
-**Strings / states:** action label defaults to `返回` (hardcoded) — `ErrorView.swift:22`; Android `common_done` 完成 — `ErrorView.kt:60`, `strings.xml:7`; caller titles `更新失败` `CourseUpdateByCasView.swift:42`, `请求失败` `CourseCenterView.swift:52`, `预约失败` (hardcoded) `LibraryBookErrorView.swift:24`, `更新失败` (hardcoded) `ScoreUpdateByCasView.swift:43`. Static; the hint is the only variable content.
+**Strings / states:** action label defaults to `返回` (hardcoded) — `ErrorView.swift:22`; Android `common_done` 完成 — `ErrorView.kt:60`, `strings.xml:7`; caller titles `更新失败` `CourseUpdateByCasView.swift:42`, `请求失败` `CourseCenterView.swift:76`, `预约失败` (hardcoded) `LibraryBookErrorView.swift:24`, `更新失败` (hardcoded) `ScoreUpdateByCasView.swift:43`. Static; the hint is the only variable content.
 **Divergence:** iOS hides the hint when empty and caps the action at 350; Android always renders the message and full-bleeds the action.
 
 ### Success view (成功视图) — platforms: both
@@ -4222,7 +4240,7 @@ Two stacked gates: the server flag `can_auto_authorize` and the client preferenc
 | Radius / padding / icon / gap / title / content | 0 (full-bleed `Rectangle`) — `:105-106`; top = safe-area top, h+b 16 — `:101-102`; 36 — `:87`; 5 — `:85`; `.semibold` 17 — `:91`; `.caption` 12, 2-line limit — `:95-96` | 12.dp — `:166`; 16.dp all round — `:169`; 32.dp — `:174`; 8.dp — `:170`; `bodyBold` 16sp — `:181-185`; `body` 16sp, no limit — `:188-193` | `radius.4` 8 (§3.8); 16 all round + status-bar inset; 36; 5; `body` 17 / Bold; `caption` 12 / Regular, 2-line limit |
 | Duration / animation / dismiss | 3 s + 0.3 s — `:37`; opacity + `move(edge: .top)` — `:108-117`; tap yes — `:118-120`; drag-up yes, `translation.height < 10` — `:121-128` | 2000 ms — `:150,202`; alpha 0→1 fade only — `:154,159`; tap yes — `:160-164`; drag-up no | 3300 ms; fade + slide from top; tap and drag-up dismiss |
 | Types / fill / presentation | info, warning, success, error, normal — `ToastType.swift:6-12`; `feedback.*` opaque, white fg, `.primary` on normal — `ToastType+UI.swift:12,14,16,18,20,28,30`; probe `UIHostingController` `sizeThatFits` then window — `ToastManager.swift:49-52,61-65` | Normal, Success, Error — `ToastManager.kt:64-68`; `0xFFEDEEEF` / `ham_green` / `red` — `:104-105,113-114,122-123`; Snackbar with a grafted `ComposeView` — `:139-144,201` | info, warning, success, error, neutral; `feedback.<type>` opaque, white fg; width = screen width, height = content |
-**Strings / states:** iOS legacy action `了解更多` is dead code — `ToastView.swift:261`, handler commented out `:247-267`; Android toasts are hardcoded Kotlin — `遇到了错误` `:224`, `网络异常，请稍后重试` `:251,254`. Transient; an empty title and content drops the toast — `ToastManager.swift:31-33`.
+**Strings / states:** iOS's toast *model* still carries an action (`actionButtonText` / `action` — `ToastModel.swift:13-14`), but the live renderer never draws it — `ToastViewNew` is `ToastView.swift:56-143` and has no action slot; Android toasts are hardcoded Kotlin — `遇到了错误` `:224`, `网络异常，请稍后重试` `:251,254`. Transient; an empty title and content drops the toast — `ToastManager.swift:31-33`.
 **Divergence:** iOS ships a full-bleed square bar, five types, 3 s, slide and drag dismiss; Android ships a 12dp rounded bar, three types, 2 s, fade only.
 
 ### Bottom sheet (底部弹层) — platforms: both
@@ -4245,7 +4263,7 @@ Two stacked gates: the server flag `can_auto_authorize` and the client preferenc
 **Strings / states:** none structural; callers supply their own 关闭 / 取消 — `IntroView.kt:184`, `CasSettingView.kt:60-79`. Hidden / shown (offset 0) / dragging.
 **Divergence:** iOS uses the platform sheet at system detents with a free drag indicator; Android hand-rolls the 85 % sheet. Android renders the 36 × 5 pill.
 
-### Banner / notification bar (横幅) — specified, shipped on neither platform
+### Banner / notification bar (横幅) — specified, never built, and the iOS implementation has been deleted
 **Purpose:** In-layout alert card for a message that belongs to a specific place on screen.
 **Layout:**
 ```text
@@ -4263,13 +4281,22 @@ Two stacked gates: the server flag `can_auto_authorize` and the client preferenc
 | Title / detail / gaps / motion / glyphs | `.bold()` — `:106`; 15 `.light` — `:108`; title→detail 2 — `:104`; icon→text default `HStack` — `:102`; `.spring()` + `move(edge: .top)` + opacity — `:119-120`; 3 s — `:125`; info blue `info.circle`, success green `checkmark.seal`, warning yellow `exclamationmark.octagon`, error red `xmark.octagon` — `:70-79,83-92` | — | `bodyBold` 17 / Bold; `subheadline` 15 / Regular; gaps `space.1` 2 and `space.3` 8; spring in from the top; 3 s auto-dismiss; tap dismisses; identical type mapping |
 **Strings / states:** none shipped; the preview carries `123` / `456` — `Banner.swift:136`. Visible / hidden, driven by the `isShow` binding.
 
-**Correction.** This component does **not** ship. `Banner` is constructed in exactly one place —
-its own SwiftUI preview, `Banner.swift:136` — and nothing else in the app builds a
-`BannerDataModel`. Android has no banner component at all (`find . -iname '*banner*'` returns
-only `SportMainViewBannerCard` and `LibraryMainViewBannerCard`, which are announcement *content*
-cards, not notification banners). Everything above is therefore a **specification of an
-unbuilt component**, not a description of shipped UI. Treat it as the target if the banner is
-ever built; do not treat it as evidence that either platform has one today.
+**Correction — updated 2026-09-24.** This component does **not** ship, and on iOS it no longer
+exists. `Banner`, `BannerDataModel` and `BannerType` lived in
+`Ham/iOS/ui/common/notification/Banner.swift` until commit **`22170257`**
+("refactor(toast): converge notification/ subsystem into the live toast/ renderer", #120) deleted
+the whole `notification/` subsystem as dead code. The one live piece, `NotificationService`, was a
+shim that built a `toast/ToastModel` and posted `ham_toastShow` — exactly what
+`ToastUtils.showToast` already does — and its two callers (`AboutView.swift`,
+`AboutFunctionView.swift`) were rewired onto `ToastUtils` directly. Android never had a banner at
+all (`find . -iname '*banner*'` returns only `SportMainViewBannerCard` and
+`LibraryMainViewBannerCard`, which are announcement *content* cards, not notification banners).
+
+So everything above is a **specification of an unbuilt component** with no implementation behind
+it on either platform — the earlier "adopt on both, or delete" question was resolved in favour of
+delete on iOS. Treat it as the target if the banner is ever built; do not treat it as evidence
+that either platform has one today. The layout diagram and values table are kept as the spec
+because the work queue may still want it; they describe no shipped pixels.
 
 ### Text field (输入框) — platforms: both
 **Purpose:** One shared single-line and multi-line text input, used by every form on both platforms.
@@ -4284,12 +4311,14 @@ ever built; do not treat it as evidence that either platform has one today.
 ```
 **Blocks:** box — fill, border, radius — `TextField.kt:42-49`; hint — shown while empty — `:74-79`; value — `:52`; password transformation — `:70-71`.
 **Values:**
-| Element | iOS `TextEdit` | iOS `TextEditorApproach` | Android `HamTextField` | normative |
-|---|---|---|---|---|
-| Radius / border / fill / padding | 4 — `TextEdit.swift:27`; 1pt `Color.lightGray` — `:28`; none; 6 — `:25` | plate 12, editor 6 — `:28,37`; none; gray @ 0.3 — `:27`; editor 9, placeholder 16 — `:33,39` | 8.dp — `TextField.kt:42,47`; 1.dp `ham_lightGray` — `:44-48`; `ham_bg_b2` #FFF9F9F9 / #ff0f1010 — `:43`, `colors.xml:66`, `values-night/colors.xml:33`; 8.dp — `:49` | `radius.4` 8; 1 `surface.tertiary`; `surface.secondary`; `space.3` 8 |
-| Text / min height / hint / caret / lines | system default; — ; native placeholder; system caret; 1, intrinsic | system default; 30 — `:36`; `.gray` @ 0.8 — `:31-32`; system; unbounded | `body` 16sp — `:52`; — ; `ham_text_secondary` #888888, offset (−2).dp — `:76,78`; `ham_blue` #007AFF — `:67`, `colors.xml:79`; `Int.MAX_VALUE`, `singleLine = true` default — `:51,55`, `fillMaxWidth` — `:62`, `PasswordVisualTransformation` — `:70-71` | `body` 17 / Regular; 30 per line, multi-line; `text.tertiary`, no offset hack; `accent`; 1 or unbounded by variant; fills the available width; password supported |
+| Element | iOS `TextEdit` | Android `HamTextField` | normative |
+|---|---|---|---|
+| Radius / border / fill / padding | 4 — `TextEdit.swift:27`; 1pt `Color.lightGray` — `:28`; none; 6 — `:25` | 8.dp — `TextField.kt:42,47`; 1.dp `ham_lightGray` — `:44-48`; `ham_bg_b2` #FFF9F9F9 / #ff0f1010 — `:43`, `colors.xml:66`, `values-night/colors.xml:33`; 8.dp — `:49` | `radius.4` 8; 1 `surface.tertiary`; `surface.secondary`; `space.3` 8 |
+| Text / min height / hint / caret / lines | system default; — ; native placeholder; system caret; 1, intrinsic | `body` 16sp — `:52`; — ; `ham_text_secondary` #888888, offset (−2).dp — `:76,78`; `ham_blue` #007AFF — `:67`, `colors.xml:79`; `Int.MAX_VALUE`, `singleLine = true` default — `:51,55`, `fillMaxWidth` — `:62`, `PasswordVisualTransformation` — `:70-71` | `body` 17 / Regular; 30 per line, multi-line; `text.tertiary`, no offset hack; `accent`; 1 or unbounded by variant; fills the available width; password supported |
 **Strings / states:** hint is caller-supplied, default `""` — `TextField.kt:50`; preview `测试` — `:89`. Empty (hint) / focused (1 border in `accent`) / error (`text.danger` border + message) / disabled (`tint.muted`) / password.
-**Divergence:** iOS's two text components are unused and are deleted, replaced by the shared field — `TextEdit.swift:10`, `TextEditorApproach.swift:10`. Android's live sites adopt it unchanged: `CourseEditViewInfoCell.kt:35,45,55`, `CourseScoreSearchResultView.kt:72`, `CourseCommentView.kt:373`, `SportPayView.kt:112`, `UserCenterInfoView.kt:119`, `PrintShareFilePrepareView.kt:238,262`, `ColorPicker.kt:163`.
+**Divergence:** iOS's `TextEditorApproach` is **deleted** (`182ccf3f`, #99); `TextEdit` survives but is
+**unused** — zero production call sites, and the `TextEdit`-looking hits in `ScheduleInsertView.swift:413`
+are a different, local `TextEditorWithPlaceholder`. Replace it with the shared field — `TextEdit.swift:10`. Android's live sites adopt it unchanged: `CourseEditViewInfoCell.kt:35,45,55`, `CourseScoreSearchResultView.kt:72`, `CourseCommentView.kt:373`, `SportPayView.kt:120`, `UserCenterInfoView.kt:119`, `PrintShareFilePrepareView.kt:238,262`, `ColorPicker.kt:163`.
 
 ### Segmented picker (分段选择器) — platforms: both
 **Purpose:** Two-to-five-way mutually exclusive choice, rendered as a track with a sliding thumb.
@@ -4321,7 +4350,7 @@ vertical:   ▮ 1 wide, height from the row (16 in colour cells)
 **Values:**
 | Element | iOS | Android | normative |
 |---|---|---|---|
-| Thickness / colour / inset | SwiftUI hairline, system separator — `ScheduleView.swift:371`, `CourseAddTimeSettingView.swift:36,53`, `CourseScoreSingleCard.swift:62`; ad-hoc insets, e.g. `.padding(.top, 12)` — `ScheduleView.swift:371` | 1.dp `DividerDefaults.Thickness` — `Divider.kt:21,31`; `ham_lightGray` #EDEEEF / #0F0E0F — `:17,27`, `colors.xml:68`, `values-night/colors.xml:35`; none | 1, `surface.tertiary`, 0 inset from the container edge, vertical padding `space.2` 4 (§3.1) |
+| Thickness / colour / inset | SwiftUI hairline, system separator — `ScheduleView.swift:394`, `CourseAddTimeSettingView.swift:36,53`, `CourseScoreSingleCard.swift:62`; ad-hoc insets, e.g. `.padding(.top, 12)` — `ScheduleView.swift:394` | 1.dp `DividerDefaults.Thickness` — `Divider.kt:21,31`; `ham_lightGray` #EDEEEF / #0F0E0F — `:17,27`, `colors.xml:68`, `values-night/colors.xml:35`; none | 1, `surface.tertiary`, 0 inset from the container edge, vertical padding `space.2` 4 (§3.1) |
 | Vertical use | — | `height(16.dp)` — `CourseEditViewColorCell.kt:83`, `CourseMainViewDetailCourseScoreCard.kt:168`, `CourseScoreResultView.kt:363` | 1 wide, height from the row |
 **Strings / states:** none.
 **Divergence:** three values disagree today — the unused `ham_divider` #F4F4F4 / #0C0C0C (`colors.xml:67`, `values-night/colors.xml:34`), `ham_lightGray` in `HamDivider`, and the iOS system separator.
@@ -4361,7 +4390,7 @@ inner:                full-text:             external:
 | Element | iOS | Android | normative |
 |---|---|---|---|
 | JS / windows / storage / images / media / dark mode / background | true / true — `EducationCASWebView.swift:34-35`, `WebContainer.swift:30`; domStorage, loadImages, media gesture not set; not set; not set (white flash) | true / true / true / true / false — `WebViewCompose.kt:51-55`; `FORCE_DARK_ON/OFF` by theme, API ≥ Q — `:70-73`; `ham_bg_b1` — `:65,69` | true / true / true / true / false; follows the system theme; `surface.primary` |
-| Cookies / reload / back / progress / error | cleared on create — `EducationCASWebView.swift:27-28,36-40`, `.nonPersistent()` — `CasMobileLoginWebView.swift:49`; `.returnCacheDataElseLoad` — `EducationCASWebView.swift:51`, `WebContainer.swift:47`; `allowsBackForwardNavigationGestures = true` — `:20,115`, in-page toolbar commented out — `:39-60`; no progress, no error | default persistent store; reload skipped when the URL is unchanged — `:90-94`; system back; no progress, no error | non-persistent for CAS, default otherwise; reload only when the URL changes; edge-swipe back plus an in-page back control when the page has history; 4-tall bar, `radius.1` 2, `surface.tertiary` track; error with 重试 |
+| Cookies / reload / back / progress / error | cleared on create — `EducationCASWebView.swift:27-28,36-40`, `.nonPersistent()` — `CasMobileLoginWebView.swift:49`; `.returnCacheDataElseLoad` — `EducationCASWebView.swift:52`, `WebContainer.swift:47`; `allowsBackForwardNavigationGestures = true` — `:20,115`, in-page toolbar commented out — `:39-60`; no progress, no error | default persistent store; reload skipped when the URL is unchanged — `:90-94`; system back; no progress, no error | non-persistent for CAS, default otherwise; reload only when the URL changes; edge-swipe back plus an in-page back control when the page has history; 4-tall bar, `radius.1` 2, `surface.tertiary` track; error with 重试 |
 | Full-text title / date / body / affordance | `.headline` limit 2 — `:22-24`; `.body` `ham_text_t2Color` limit 1 — `:27-30`; `Text(.init(content))` — `:34`; 查看详情 + `arrow.up.right`, bottom-trailing offset (−16, −4), `.blue` — `:66-75`; `isMarkdown` parsed but unused — `:59` | no equivalent | identical on both, and `isMarkdown` is honoured |
 | External link | `SFSafariViewController`, dismiss delegate — `SafariViewController.swift:25-27,42-44,62` | `Intent(ACTION_VIEW)` — `AboutView.kt:258,291,448`, `MyViewLinkCard.kt:90,116`, `MyPromotionView.kt:58`, `ScoreJsCalcDetailView.kt:218`, `VersionUpdateSheet.kt:153,186` | in-app browser sheet on both |
 **Strings / states:** `加载中` is hardcoded — `InnerWebView.swift:31`. Loading (title text plus the progress bar) / loaded / failed → error with 重试.
@@ -4379,10 +4408,10 @@ inner:                full-text:             external:
 **Values:**
 | Element | iOS | Android | normative |
 |---|---|---|---|
-| Sizing / startup | `.frame(maxWidth:.infinity, maxHeight:.infinity)` — `CasMobileLoginWebView.swift:15`, `CourseUpdateByCasView.swift:24`; `ScoreJsCalcView.swift:19` ignores top + bottom; sync, async variant `RNContainerAsyncView` — `RNContainerView.swift:33-55` | `Modifier.fillMaxSize()` — `CasMobileLoginView.kt:57`, `ScoreJsCalcView.kt:40`, `CourseSettingViewUpdateCourseSheet.kt:170`; `RNHost.initHost` on `Dispatchers.IO`, `show` seeded from `RNHost.inited` — `RNCommonView.kt:21-34` | fills the available box; initialise off the main thread |
+| Sizing / startup | `.frame(maxWidth:.infinity, maxHeight:.infinity)` — `CasMobileLoginWebView.swift:15`, `CourseUpdateByCasView.swift:24`; `ScoreJsCalcView.swift:19` ignores top + bottom; sync, async variant `RNContainerAsyncView` — `RNContainerView.swift:33-55` | `Modifier.fillMaxSize()` — `CasMobileLoginView.kt:57`, `ScoreJsCalcView.kt:36`, `CourseSettingViewUpdateCourseSheet.kt:170`; `RNHost.initHost` on `Dispatchers.IO`, `show` seeded from `RNHost.inited` — `RNCommonView.kt:21-34` | fills the available box; initialise off the main thread |
 | Lifecycle / bundle | singleton factory, `RCTAppDependencyProvider` — `:74-90`; debug dev server, release `HotUpdater.bundleURL()`, prebuilt `Ham/iOS/ui/rn/main.jsbundle` — `:98-104` | `onHostResume` / `onHostDestroy` via `DisposableEffect` — `ReactNativeContainerRendererImpl.kt:27-32`; `RNInitHelper` / `IRNManager` | resume / pause / destroy wired to the host; debug dev server, release OTA |
-| Modules (6 each) / gap while starting | `RNCasMobileLogin`, `RNCas`, `RNCommon`, `RNEducation`, `RNLog`, `RNScoreCalc` — Swift + `.mm`; empty `ZStack` — `RNContainerView.swift:40-44` | `RNCommonModule`, `RNEducationModule`, `RNLogModule`, `RNCasMobileLoginModule`, `RNCasModule`, `RNScoreCalcModule`; nothing until `show` flips — `RNCommonView.kt:31`, `delegate.reactRootView!!` — `ReactNativeContainerRendererImpl.kt:35` | identical names and contracts; shared Loading spinner, no non-null assertion |
-**RN-backed screens:** headless bootstrap `ContentView.swift:37` / `RNCommonView.kt:32` — `RNCommon`; CAS login `CasMobileLoginWebView.swift:14` / `CasMobileLoginView.kt:57` — `RNCasMobileLogin`; update course `CourseUpdateByCasView.swift:23` / `CourseSettingViewUpdateCourseSheet.kt:170` — `RNFetchCourseView`; update score `ScoreUpdateByCasView.swift:24` / `ScoreMainViewUpdateScoreSheet.kt:156` — `RNFetchScoreView`; score JS calc `ScoreJsCalcView.swift:18` / `ScoreJsCalcView.kt:40` — `RNScoreCalcView`.
+| Modules (6 each) / gap while starting | `RNCasMobileLogin`, `RNCas`, `RNCommon`, `RNEducation`, `RNLog`, `RNScoreCalc` — Swift + `.mm`; empty `ZStack` — `RNContainerView.swift:40-44` | `RNCommonModule`, `RNEducationModule`, `RNLogModule`, `RNCasMobileLoginModule`, `RNCasModule`, `RNScoreCalcModule`; nothing until `show` flips — `RNCommonView.kt:31`, `delegate.reactRootView!!` — `ReactNativeContainerRendererImpl.kt:46` | identical names and contracts; shared Loading spinner, no non-null assertion |
+**RN-backed screens:** headless bootstrap `ContentView.swift:37` / `RNCommonView.kt:32` — `RNCommon`; CAS login `CasMobileLoginWebView.swift:14` / `CasMobileLoginView.kt:57` — `RNCasMobileLogin`; update course `CourseUpdateByCasView.swift:23` / `CourseSettingViewUpdateCourseSheet.kt:170` — `RNFetchCourseView`; update score `ScoreUpdateByCasView.swift:24` / `ScoreMainViewUpdateScoreSheet.kt:156` — `RNFetchScoreView`; score JS calc `ScoreJsCalcView.swift:18` / `ScoreJsCalcView.kt:36` — `RNScoreCalcView`.
 **Strings / states:** `正在更新` `CourseUpdateByCasView.swift:35`, `更新成功` `:40`, `更新失败` `:42`, `选择计算方式` `ScoreJsCalcView.swift:20`. Starting (shared spinner) / ready / failed (Error view + 重试) / RN disabled by the CCKV kill-switch → native captcha fallback — `CourseUpdateByCasView.swift:11,21,25-31`.
 **Divergence:** iOS gates RN behind the CCKV key `.rnComponentConfig` with a native captcha fallback; Android hosts the same modules with no fallback.
 
@@ -4391,10 +4420,10 @@ inner:                full-text:             external:
 | Component | Status | Normative action | file:line |
 |---|---|---|---|
 | Empty view | absent on both | build once, adopt on both | `LibrarySelectSeatView.swift:243,248` |
-| Banner | zero production call sites | adopt on both, or delete | `Banner.swift:56,136` |
-| `NotificationService` | uncalled | delete | `Banner.swift:10-54` |
-| iOS text field | zero production call sites | delete both, adopt one shared field | `TextEdit.swift:10`, `TextEditorApproach.swift:10` |
-| iOS segmented picker | zero production call sites | ship one shared picker on both | `SegmentedPicker.swift:10` |
+| Banner | **deleted** — `22170257` (#120) removed the whole `notification/` subsystem | **resolved: deleted.** Re-add here only if a banner is ever actually built | — |
+| `NotificationService` | **deleted** — `22170257` (#120); it was a `ToastModel`-posting shim duplicating `ToastUtils.showToast`, and its two live callers (`AboutView.swift`, `AboutFunctionView.swift`) were rewired onto `ToastUtils` | **resolved: deleted** | — |
+| iOS text field | `TextEditorApproach` **deleted** — `182ccf3f` (#99); `TextEdit` survives with zero production call sites | resolved for one of the two; delete `TextEdit`, adopt one shared field | `TextEdit.swift:10` |
+| iOS segmented picker | **deleted** — `53a17721` (#101) removed `SegmentedPicker.swift` as dead code | **resolved: deleted.** Ship one shared picker on both if a picker is ever rebuilt | — |
 | Skeleton | iOS only | build on Android | `LibrarySelectSeatView.swift:345-372` |
 | Blocking loading modal | Android only | build on iOS | `LoadingModalView.kt:26-40` |
 | Labelled spinner | print module only | promote to the shared component | `PrintShareFileLoadingView.kt:32-37` |
@@ -4407,7 +4436,7 @@ inner:                full-text:             external:
 
 ### Intro / connect screen (连接页)
 
-Specified in **Part 3 — Authentication** (§ CAS verification gate / Intro view): `IntroView.swift:35-164`, `core/ui/.../intro/IntroView.kt:66-245`.
+Specified in **Part 3 — Authentication** (§ CAS verification gate / Intro view): `IntroView.swift:35-149`, `core/ui/.../intro/IntroView.kt:66-245`.
 Its anatomy — dismiss control, logo → link → module icon row, title, subtitle, choice card, CAS row — belongs to that flow.
 Nothing is duplicated here.
 
@@ -4421,7 +4450,9 @@ and §6 (Android) — neither was measured in the audit. Every value carries one
 **Prefixes** — `IOS/` `repos/ham-ios/Ham/iOS/` · `AND/` `repos/ham-android/android/` ·
 `ANDCORE/` `AND/core/ui/…/com/nowcent/ham/common/ui/` · `CASSTR:` `AND/feature/cas/…/values/strings.xml` ·
 `MYSTR:` `AND/feature/my/…/values/string.xml` · `AUTOSTR:` `AND/feature/automatic/…/values/strings.xml` ·
-`APPSTR:` `AND/app/…/values/strings.xml` · `LS:` `Ham/zh-Hans.lproj/Localizable.strings`. Basenames: `.swift` =
+`APPSTR:` `AND/app/…/values/strings.xml` · `LS:`/`IS:` `Ham/Localizable.xcstrings` **keys**, not line
+numbers — both prefixes name the same catalog (the split is historical), e.g. `LS:common.status`.
+Basenames: `.swift` =
 iOS, `.kt` = Android. pt and dp are 1:1.
 
 **Tokens** — card r16 / pad16 / `ham_bg_b2` (`ANDCORE/container/card/Card.kt:53,48,42`; iOS
@@ -4469,15 +4500,16 @@ dismiss after **300 ms** (iOS `:59-65`) / pop the back stack (Android `:36-40`; 
 | Element | iOS | Android | normative |
 |---|---|---|---|
 | Toolbar | none — title passed to `InnerWebView` `BusView.swift:43` | `HamNavigationView` 42.dp `BusView.kt:50` | **42.dp toolbar, no bounce scroll** |
-| Nav title | 校巴 `BusView.swift:43` (`LS:731`) | `cas_bus_title` 校巴 `BusView.kt:51` (`CASSTR:21`) | 校巴 |
+| Nav title | 校巴 `BusView.swift:43` (`LS:common.campusBus`) | `cas_bus_title` 校巴 `BusView.kt:51` (`CASSTR:21`) | 校巴 |
 | Intro icon / brand | `bus.fill` `BusIntroView.swift:20` / `.ham_brand_bus` (`Color+Ham.swift:40`) | `Icons.Filled.DirectionsBus` `BusIntroView.kt:48` / `ham_brand_bus` (`Color.kt:87`) | bus glyph in `ham_brand_bus` |
-| Intro title + rows | 连接校巴, CAS row only `BusIntroView.swift:21,25` (`LS:835`) | `cas_connect_bus` 连接校巴, CAS row only `BusIntroView.kt:47,84-86` (`CASSTR:22`) | 连接校巴, CAS row only |
-| Intro subtitle | 使用前，Ham需要验证你的在校信息 `BusIntroView.swift:22` (`LS:547`) | **none** `BusIntroView.kt:44-50` | **使用前，Ham需要验证你的在校信息** |
+| Intro title + rows | 连接校巴, CAS row only `BusIntroView.swift:21,25` (`LS:bus.busIntroView.connectCampusBus`) | `cas_connect_bus` 连接校巴, CAS row only `BusIntroView.kt:47,84-86` (`CASSTR:22`) | 连接校巴, CAS row only |
+| Intro subtitle | 使用前，Ham需要验证你的在校信息 `BusIntroView.swift:22` (`LS:common.hamNeedsToVerifyYour`) | **none** `BusIntroView.kt:44-50` | **使用前，Ham需要验证你的在校信息** |
 | Gate delay | 300 ms `BusView.swift:70` | 500 ms `BusView.kt:44` | **300 ms** |
 | Success screen | none — straight to the webview `BusIntroView.swift:28-30` | `cas_verify_success` 验证成功 + message `BusIntroView.kt:62-63` | **shared success view on both** |
 | Failure | `ToastUtils.showError` `BusView.swift:92-94` | intro routes to error view `BusIntroView.kt:70-81` | error view inside the sheet |
 
-**Strings:** 校巴 · 连接校巴 · 使用前，Ham需要验证你的在校信息 · 验证成功 · 验证失败 (`CASSTR:21-23`; `LS:731,835,547`).
+**Strings:** 校巴 (`LS:common.campusBus`) · 连接校巴 (`LS:bus.busIntroView.connectCampusBus`) ·
+使用前，Ham需要验证你的在校信息 (`LS:common.hamNeedsToVerifyYour`) · 验证成功 · 验证失败 (`CASSTR:21-23`).
 **States:** loading — none (blank until the ticket resolves); unauthenticated — connect sheet; fetch failure —
 error view in the sheet.
 **Divergence:** iOS has no toolbar on the webview and no bus success/error screen; Android has both and opens
@@ -4514,11 +4546,12 @@ margin 16.dp (`NavigationView.kt:134`). 4 **Insets** — Android `ignoreStatusBa
 | Nav title | E卡, hardcoded over the page title `PayView.swift:41` | `cas_e_card_title` E卡 `PaySheetView.kt:49` (`CASSTR:16`) | **E卡, fixed — discard the page title** |
 | Toolbar chrome | `◀` web-back + `✕` close `PayView.swift:48,56`; bottom inset ignored `:66` | back only, margin 16.dp `NavigationView.kt:134`; `ignoreStatusBarHeight` `PaySheetView.kt:53`; bounce off `:54` | **web-back then close; ignore the status-bar height, keep the bottom inset; bounce off** |
 | Intro icon | `creditcard.fill` `PayIntroView.swift:21` | `Icons.Rounded.CreditCard` `PayIntroView.kt:56` | card glyph in `ham_brand_pay` |
-| Intro title | 连接珞珈E卡, subtitle 使用前，Ham需要验证你的在校信息 `PayIntroView.swift:22-23` (`LS:836`) | `cas_connect_e_card` 连接E卡, no subtitle `PayIntroView.kt:55` (`CASSTR:15`) | **连接珞珈E卡 + subtitle** |
+| Intro title | 连接珞珈E卡, subtitle 使用前，Ham需要验证你的在校信息 `PayIntroView.swift:22-23` (`LS:pay.payIntroView.connectLuojiaECard`) | `cas_connect_e_card` 连接E卡, no subtitle `PayIntroView.kt:55` (`CASSTR:15`) | **连接珞珈E卡 + subtitle** |
 | Success / failure | neither — `ToastUtils.showError` `PayView.swift:87-89` | `cas_verify_success` + `cas_e_card_success_message` `PayIntroView.kt:68-75`; error view `:76-87` (`CASSTR:19`) | **shared success + error views on both** |
 
-**Strings:** 珞珈E卡 / E卡 · 连接珞珈E卡 · 使用前，Ham需要验证你的在校信息 · 验证成功 · 你可以开始使用E卡了 · 验证失败
-(`CASSTR:15-19`; `LS:497,836`).
+**Strings:** 珞珈E卡 / E卡 (`LS:common.eCard`) · 连接珞珈E卡 (`LS:pay.payIntroView.connectLuojiaECard`) ·
+使用前，Ham需要验证你的在校信息 (`LS:common.hamNeedsToVerifyYour`) · 验证成功 · 你可以开始使用E卡了 · 验证失败
+(`CASSTR:15-19`; iOS ships no E-card success body — `PayView.swift:87-89` toasts instead).
 **States:** unauthenticated — connect sheet; authenticated — webview; failure — error view. No loading state.
 **Divergence:** iOS is an inline branch with its own web-back button and no success/error screen; Android is an
 85 % sheet with both. iOS says 珞珈E卡, Android 连接E卡. iOS ignores the bottom safe area, Android the top.
@@ -4528,7 +4561,7 @@ margin 16.dp (`NavigationView.kt:134`). 4 **Insets** — Android `ignoreStatusBa
 ### 3. Privacy (隐私) — platforms: both
 **Purpose:** Blocking first-run consent gate — the app is unusable until the policy is accepted.
 **Entry:** iOS from the login screen (`IOS/ui/common/login/LoginView.swift:106,245`) and `PrivacyView2.swift:101`;
-Android as an activity `MainActivity.kt:66` → `PrivacyActivity.kt:15`.
+Android as an activity `MainActivity.kt:72,75` → `PrivacyActivity.kt:15`.
 **Layout:**
 ```
 ┌ scrim black@0.5 · fillMaxSize ────────────────────────┐
@@ -4570,7 +4603,7 @@ hosting a webview (`PrivacyView.swift:36-52`; `PrivacyView.kt:108-117,128`); URL
 [必须] 设备标识，用于推送服务、统计数据与记录崩溃数据 · [可选] 查给分时上传的成绩 · 查看隐私协议 · 退出Ham / 拒绝 ·
 同意 / 接受 (`APPSTR:12-16`).
 **States:** agreed / not agreed (`vm.isAgreePrivacy`, `PrivacyView.kt:64`). No loading, no error state.
-**Divergence:** every iOS string is **hardcoded** — none in `Localizable.strings`. iOS is a full-screen page with
+**Divergence:** ~~every iOS string is **hardcoded** — none in `Localizable.strings`~~ — **corrected 2026-09-24**: `PrivacyView.swift:19-67` now reads `Text("common.privacyPolicy")`, `Text("common.youNeedToAgreeTo")`, `Text("common.inGeneralHamCollectsThe")` and four more, so nothing on this screen is hardcoded any more. What remains is that iOS is a full-screen page with
 a quit-app affordance; Android is a 300.dp dialog whose reject/accept live in the policy sheet, and it omits the
 data list. A third `privacy_help` variant exists twice (`APPSTR:25`, `feature/my/…/string.xml:3`) and a second
 policy URL (`orangeboychen.github.io/whu-ham/privacy/`, `AND/feature/auth/…/strings.xml:19`) — consolidate both.
@@ -4608,16 +4641,16 @@ through `Text(.init(changeLog))` in a `ScrollView` (`:27-33`). 5 **Confirm** —
 | Element | iOS | Android | normative |
 |---|---|---|---|
 | Hero glyph / size / colour | `wand.and.stars` `:19` / 56 / `.blue` `:20-21` | `Icons.Rounded.Description` `:67` / 72.dp / `ham_blue` `:69-70` | **document glyph, 72, accent** |
-| Title font + copy | `.title.bold()` / 本次更新日志 (`:23-24`, `LS:722`) | `title` 24 Bold / 更新日志 (`:74`, `MYSTR:72`) | **24 Bold / 更新日志** |
+| Title font + copy | `.title.bold()` / 本次更新日志 (`:23-24`, `LS:common.updateNotes`) | `title` 24 Bold / 更新日志 (`:74`, `MYSTR:72`) | **24 Bold / 更新日志** |
 | Version + date row | absent | `title2` + `caption`, gap 8 `:97-115` | **present**, date hidden when ≤ 0 |
 | Body source + markdown | one raw markdown string via SwiftUI `Text(.init(_:))` `:29` | structured `title` + `content` via `MarkdownText` `:116-129`, `:42,124` | **structured title + content, markdown, body 16** |
 | Body container + scrolling | grey@0.1 r10 pad 12, `ScrollView` `:32,35-36`, `:27` | none, not scrollable `:91` | **none — text on the sheet; scrolls on overflow** |
 | Gap above button | `Spacer()` `:38` | 48.dp `:90` | **48** |
-| Button visuals | `Color.blue` fill / `.white` text, r10, pad 16, default font, 去使用 (`:42-46`, `LS:593`) | `ham_blue@0.15` fill / `ham_blue` text, r12, pad-v 16, `bodyBold` 16, 好 (`:141-149`, `MYSTR:74`) | **accent@0.15 fill, accent text, r12, pad-v 16, fillMaxWidth, bodyBold 16, 好** |
+| Button visuals | `Color.blue` fill / `.white` text, r10, pad 16, default font, 去使用 (`:42-46`, `LS:common.startUsing`) | `ham_blue@0.15` fill / `ham_blue` text, r12, pad-v 16, `bodyBold` 16, 好 (`:141-149`, `MYSTR:74`) | **accent@0.15 fill, accent text, r12, pad-v 16, fillMaxWidth, bodyBold 16, 好** |
 | Sheet padding | 16 all round `:55` | top 32, bottom = nav-bar height `:62` | **top 32, bottom = nav-bar height** |
 
 **Strings:** 更新日志 · 好 · 未知版本 · 标题 / 副标题 (preview placeholders, `MYSTR:72-76`); iOS 本次更新日志 · 去使用
-(`LS:722,593`).
+(`LS:common.updateNotes` · `LS:common.startUsing`).
 **States:** **empty — do not present the sheet** (Android renders nothing when `changeLogBody == null`,
 `VersionInfoSheet.kt:58`; iOS today shows an empty grey box). No loading, no error.
 **Divergence:** iOS has no version/date row, wraps the body in a grey r10 card, uses a solid blue button, and
@@ -4675,8 +4708,8 @@ changelog (§4a). No iOS norm is invented; file it as a parity gap (iOS today ca
 ### 5. Debug (调试) — platforms: both
 **Purpose:** Developer-only switch between the production backend and a custom HTTP/gRPC endpoint; debug builds
 only.
-**Entry:** iOS `#if DEBUG` row on the My tab (`IOS/ui/my/component/card/MyViewSettingCard.swift:121`, gated
-`:124`) and `#if DEBUG` route `.debug` (`IOS/ui/main/Route.swift:103,245`); the view is itself wrapped in
+**Entry:** iOS `#if DEBUG` row on the My tab (`IOS/ui/my/component/card/MyViewSettingCard.swift:112-123`, gated
+`:124`) and `#if DEBUG` route `.debug` (`IOS/ui/main/Route.swift:105,282`); the view is itself wrapped in
 `#if DEBUG` (`DebugView.swift:11,120`). Android nav route in the My graph
 (`AND/feature/my/…/ui/MyView.kt:55`) — **not** build-gated.
 **Layout:**
@@ -4709,7 +4742,7 @@ trimmed value back. 5 **Defaults** — HTTP `https://api.ham.nowcent.cn`, gRPC `
 
 | Element | iOS | Android | normative |
 |---|---|---|---|
-| Container / card | `ScrollView` + `VStack(16)`, pad 16, `ham_bg_b1Color` `DebugView.swift:30-31,109,112`; card r16/`ham_bg_b2`/pad16 `CardView.swift:23,22,128` | `HamNavigationScrollView` + `Column(16.dp)`, pad 16, `ham_bg_b1` `DebugView.kt:64-68`; card r16/`ham_bg_b2`/pad16 `Card.kt:53,42,48` | scrolling column, pad 16, gap 16, card token |
+| Container / card | `ScrollView` + `VStack(16)`, pad 16, `ham_bg_b1Color` `DebugView.swift:30-31,109,112`; card r16/`ham_bg_b2`/pad16 `CardView.swift:23,22,128` | `HamNavigationScrollView` + `Column(16.dp)`, pad 16 — `DebugView.kt:64-67`, `ham_bg_b1` — `NavigationView.kt:389`; card r16/`ham_bg_b2`/pad16 `Card.kt:53,42,48` | scrolling column, pad 16, gap 16, card token |
 | Card title | `.semibold` `ham_text_t1Color` `CardView.swift:60-61` | `bodyBold` 16 `ham_text_primary` `Card.kt:81` | **bodyBold 16** |
 | Env-card inner gap | 12 `:34` | 8.dp `:74` | **8** |
 | Server-card inner gap | 12 `:52,78` | 12.dp `:108,149` | 12 |
@@ -4738,7 +4771,7 @@ keyboard, 12 env-card spacing and `.roundedBorder`. Both files were AI-generated
 label** — iOS donates a Siri Shortcut for library booking; Android schedules an alarm that auto-books a seat.
 Only the entry label and the hint card are shared.
 **Entry:** iOS route `.automatic` → `MySiriView()` (`Route.swift:99,220`) and a My-tab row
-(`MyViewSettingCard.swift:49`); Android `MyViewRoute.AUTOMATIC_SETTING` from the settings hub
+(`MyViewSettingCard.swift:48`); Android `MyViewRoute.AUTOMATIC_SETTING` from the settings hub
 (`AND/feature/my/…/setting/SettingView.kt:57`).
 **Layout (iOS `IOS/ui/siri/MySiriView.swift:11-25` / Android `AND/feature/automatic/…/ui/AutomaticSettingView.kt:50-125`):**
 ```
@@ -4768,13 +4801,13 @@ control; *tap* donates the shortcut. 3 spacer (`:18`); logging tag `AutomaticVie
 
 | Element | iOS | Android | normative |
 |---|---|---|---|
-| Nav title | 自动化 (`LS:35`) | 自动化操作 (`AUTOSTR:4`) | **自动化操作** |
+| Nav title | 自动化 (`LS:common.automatic`) | 自动化操作 (`AUTOSTR:4`) | **自动化操作** |
 | Explainer | caption 12 secondary, bare text `:13-15` | hint card — `bodyBold` accent title + 2× caption `:55-76` | **hint card, title + 2 caption lines** |
 | Hint icon / pad | none | `Icons.Rounded.Alarm` 128.dp `:57-58` / 12.dp `:56` | alarm glyph 128 / pad 12 |
 | Controls | Add-to-Siri, h 60 `:16-17` | `HamSwitch` `:96-98` + `HamTimePickerButton` `:113`, revealed slide+fade `:101-105` | platform-native (not merged) |
 | Screen pad / gap | 16 / — `:21` | 16.dp / 16.dp `:52-53` | 16 / 16 |
 
-**Strings:** iOS 自动化 (`LS:35`) · 通过Siri预约图书馆 (`LS:59`). Android 自动化操作 · 提示 ·
+**Strings:** iOS 自动化 (`LS:common.automatic`) · 通过Siri预约图书馆 (`LS:common.reserveASeatInThe`). Android 自动化操作 · 提示 ·
 通过选定时间，实现自动预约图书馆或完成每日计划。 · 〈autostart / notification tip〉 · 图书馆 · 自动快速预约 · 时间
 (`AUTOSTR:3-9`), plus alarm notification copy for running / success `已预约%1$s` / ignored (not-logged-in,
 no-seat) / failed (`AUTOSTR:10-19`).
@@ -4816,7 +4849,7 @@ framed 56×56 on a `Circle()` filled `#12B7f5` (`:87-96`); *tap* → `shareUrlTo
 | QQ fill / glyph | `#12B7F5` / asset `QQ-2`, inner pad 8 `:87-94` | — | QQ brand blue, inner pad 8 |
 | System fill / glyph | `gray@0.25` / SF symbol 24, `ham_text_t1Color` `:103-109` | — | **`ham_text_secondary`@0.15 fill, `ham_text_primary` glyph 24** |
 
-**Strings:** 分享到 (`:80`) — move to `Localizable.strings` (hardcoded today).
+**Strings:** 分享到 (`ShareView.swift:80`) — ~~move to `Localizable.strings` (hardcoded today)~~ **done**: `Text("common.shareTo")` in `Localizable.xcstrings`.
 **States:** shown / hidden; the QQ target is hidden when QQ is not installed. No loading, error or empty state.
 **Divergence:** **Android has no equivalent** — it fires the system share intent directly
 (`AND/feature/print/…/PrintShareFileLoadingView.kt`, `MyViewLinkCard.kt:90,116`). No Android norm is invented;
@@ -4843,7 +4876,7 @@ in-place and need merging; the rest are done.
 | 24 | CAS settings (信息门户设置) | both | `shared.md:1748-1844` |
 | 25a | Settings hub (设置) | Android only | `SettingView.kt:40-90`; iOS inlines the rows on the My tab |
 | 25b, 25c, 25i | Language / widget / promotion settings | Android only | no iOS equivalent for language (iOS follows the system locale) or widget settings |
-| 25d | Print / share-file flow | both | iOS `PrintPrepareView` (330 ln) + `PrintFileSourcePicker` + `PrintActionExtension`; Android `feature/print/` 5 surfaces, incl. the only spinner+label pairing in the codebase |
+| 25d | Print / share-file flow | both | iOS `PrintPrepareView` (138 ln) + `shared/ui/print/PrintOptionsForm.swift` + `PrintFileSourcePicker` + `PrintActionExtension`; Android `feature/print/` 5 surfaces, incl. the only spinner+label pairing in the codebase |
 | 25e, 25g, 25h | Social-account binding, authorized apps, passkey config | iOS only | `SyncSocialAccountView.swift:23-90`; `IOS/ui/sso/AuthorizedAppsView.swift`; Android has passkey *login* only (`LoginView.kt:202-232`) |
 | 25f | User center / profile info | both | flagged in the audit as **not extracted** — needs a follow-up pass |
 | 26 | Cross-cutting findings | — | 17 ranked findings (dead iOS components, inverted success/error icon colours, the r8/r12 button triple standard, unlocalised iOS strings, unused `ham_divider` token) — belong in the top-level spec |
